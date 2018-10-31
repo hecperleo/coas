@@ -245,7 +245,7 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2ConstPtr &input)
             // Construct bounding box
             constructBoundingBoxes(x_center_, y_center_, z_center_, max_dist_x_, max_dist_y_, max_dist_z_, false);
         }
-        // Publish all boxes at one time and clean boxes vector
+        // Publish all boxes at one time
         pub_boxes_.publish(boxes_);
         // Calculate all possible polygons formed by clusters
         calculateVectorPolygons();
@@ -358,6 +358,7 @@ void BoundingBoxes::calculateCenters()
 
 void BoundingBoxes::constructBoundingBoxes(float x, float y, float z, float dimX, float dimY, float dimZ, bool merge)
 {
+    box_.header.stamp = ros::Time::now();
     box_.pose.position.x = x;
     box_.pose.position.y = y;
     box_.pose.position.z = z;
