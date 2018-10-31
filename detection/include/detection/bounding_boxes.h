@@ -25,8 +25,7 @@ public:
 private:
   // Callbacks
   void phaseCallback(const std_msgs::Int8 phaseMode);
-  //void clustersCallback(const detection::VectorPointCloud input);
-  void cloudCallback(const sensor_msgs::PointCloud2ConstPtr &input);  
+  void cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud);  
   //
   void getParameters();
   void calculateCenters();

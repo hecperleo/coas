@@ -117,16 +117,15 @@ void BoundingBoxes::phaseCallback(const std_msgs::Int8 phaseMode)
     }
 }
 
-void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2ConstPtr &input)
+void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud)
 {
     // Euclidean Clusterer Part
     double time_start = ros::Time::now().toSec();
 
-    sensor_msgs::PointCloud2 input_cloud = *input;
     pcl::PointCloud<pcl::PointXYZ>::Ptr downsampled_XYZ(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_f(new pcl::PointCloud<pcl::PointXYZ>);
     // Change the variable type from sensor_msgs::PointCloud2 to pcl::PointXYZ
-    pcl::fromROSMsg(input_cloud, *downsampled_XYZ);
+    pcl::fromROSMsg(*input_cloud, *downsampled_XYZ);
     // Create the object SACSegmentation, define the model and the type of the method
     pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients());
     pcl::PointIndices::Ptr inliers(new pcl::PointIndices());
@@ -172,7 +171,7 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2ConstPtr &input)
             extract.setIndices(inliers);
             extract.setNegative(false);
             // Get the points associated with the planar surface
-            extract.filter(*cloud_plane);
+            extract.filter(*cloud_plane); // Maybe this step could be skipped
             // Remove the planar inliers, extract the rest
             extract.setNegative(true);
             extract.filter(*cloud_f);
@@ -213,7 +212,7 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2ConstPtr &input)
         // Convert the point cloud into a typed message to be used in ROS
         sensor_msgs::PointCloud2::Ptr output(new sensor_msgs::PointCloud2);
         pcl::toROSMsg(*cloud_cluster, *output);
-        output->header.frame_id = input_cloud.header.frame_id;
+        output->header.frame_id = input_cloud->header.frame_id;
         clusters_vector.clouds.push_back(*output);
         pub_vec_point_clouds_[j].publish(output);
         ++j;
