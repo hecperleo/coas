@@ -141,10 +141,10 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
     // How close must be a point from the model to consider it in line
     seg.setDistanceThreshold(distance_threshold_); // (default 0.02)
 
-    int i = 0, nr_points = (int)downsampled_XYZ->points.size();
+    int nr_points = (int)downsampled_XYZ->points.size();
 
     // Contains the point cloud of the plane
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_plane(new pcl::PointCloud<pcl::PointXYZ>());
+    //pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_plane(new pcl::PointCloud<pcl::PointXYZ>());
     if (phase_ == 1 || phase_ == 2)
     {
         float percentage;
@@ -169,14 +169,13 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
             pcl::ExtractIndices<pcl::PointXYZ> extract;
             extract.setInputCloud(downsampled_XYZ);
             extract.setIndices(inliers);
-            extract.setNegative(false);
+            //extract.setNegative(false);
             // Get the points associated with the planar surface
-            extract.filter(*cloud_plane); // Maybe this step could be skipped
+            //extract.filter(*cloud_plane); // Maybe this step could be skipped
             // Remove the planar inliers, extract the rest
             extract.setNegative(true);
             extract.filter(*cloud_f);
             downsampled_XYZ.swap(cloud_f);
-            i++;
         }
     }
     // Creating the KdTree object for the search method of the extraction
@@ -199,8 +198,7 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
         ros::Publisher pub = nh_.advertise<sensor_msgs::PointCloud2>(topicName, 1);
         pub_vec_point_clouds_.push_back(pub);
     }
-    int j = 0;
-    detection::VectorPointCloud clusters_vector;
+    std::vector<pcl::PointCloud<pcl::PointXYZ>> clusters_vector;
     for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin(); it != cluster_indices.end(); ++it)
     {
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster(new pcl::PointCloud<pcl::PointXYZ>);
@@ -209,13 +207,13 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
         cloud_cluster->width = cloud_cluster->points.size();
         cloud_cluster->height = 1;
         cloud_cluster->is_dense = true;
+
+        clusters_vector.push_back(*cloud_cluster);
         // Convert the point cloud into a typed message to be used in ROS
         sensor_msgs::PointCloud2::Ptr output(new sensor_msgs::PointCloud2);
         pcl::toROSMsg(*cloud_cluster, *output);
         output->header.frame_id = input_cloud->header.frame_id;
-        clusters_vector.clouds.push_back(*output);
         pub_vec_point_clouds_[j].publish(output);
-        ++j;
     }
 
     std::cout << "[ EUCL] Time: " << ros::Time::now().toSec() - time_start << std::endl;
@@ -223,26 +221,23 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
     //*****************************************************************************
     // Bounding Boxes part
     time_start = ros::Time::now().toSec();
-    if (!clusters_vector.clouds.empty())
+    if (!clusters_vector.empty())
     {
         label_box_ = label_merge_box_ = 0;
         // Work with every single cluster
-        for (int i = 0; i < clusters_vector.clouds.size(); i++)
+        for (int i = 0; i < clusters_vector.size(); ++i)
         {
-            pcl::PCLPointCloud2 pcl_pc2;
-            pcl_conversions::toPCL(clusters_vector.clouds[i], pcl_pc2);
-            pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-            pcl::fromPCLPointCloud2(pcl_pc2, *temp_cloud);
             // Reinitialize variables
             resetVariables();
             // Calculate centroid of the cluster
-            pcl::compute3DCentroid(*temp_cloud, centroid_);
+            pcl::compute3DCentroid(clusters_vector[i], centroid_);
             // Calculate maximum distances of the cluster
-            calculateMaxDistancesCluster(*temp_cloud);
+            calculateMaxDistancesCluster(clusters_vector[i]);
             // Calculate center of the cluster
             calculateCenters();
             // Construct bounding box
-            constructBoundingBoxes(x_center_, y_center_, z_center_, max_dist_x_, max_dist_y_, max_dist_z_, false);
+            constructBoundingBoxes(x_center_, y_center_, z_center_, 
+                                   max_dist_x_, max_dist_y_, max_dist_z_, false);
         }
         // Publish all boxes at one time
         pub_boxes_.publish(boxes_);
@@ -287,9 +282,9 @@ void BoundingBoxes::cleanVariables()
 void BoundingBoxes::calculateMaxDistancesCluster(const pcl::PointCloud<pcl::PointXYZ> cluster)
 {
     // Compare every single point with the rest of the point cloud
-    for (int i = 0; i < cluster.points.size(); i++)
+    for (int i = 0; i < cluster.points.size(); ++i)
     {
-        for (int j = 0; j < cluster.points.size(); j++)
+        for (int j = 0; j < cluster.points.size(); ++j)
         {
             // Storage the largest distance in X
             if (max_dist_x_ < fabs(cluster.points[i].x - cluster.points[j].x))
@@ -424,7 +419,7 @@ void BoundingBoxes::checkPostDimension(float xDim, float yDim, float zDim)
         {
             int counter_between_posts = 0;
             // Calculate the distance between all posts
-            for (int i = 0; i < reference_boxes_.boxes.size(); i++)
+            for (int i = 0; i < reference_boxes_.boxes.size(); ++i)
             {
                 for (int j = i + 1; j < reference_boxes_.boxes.size(); j++)
                 {
@@ -499,7 +494,7 @@ nav_msgs::Path BoundingBoxes::constructPath(std::vector<float> x, std::vector<fl
     nav_msgs::Path path;
     std::vector<geometry_msgs::PoseStamped> poses(length);
     path.header.frame_id = "velodyne";
-    for (int i = 0; i < length; i++)
+    for (int i = 0; i < length; ++i)
     {
         poses.at(i).pose.position.x = x[i];
         poses.at(i).pose.position.y = y[i];
@@ -514,7 +509,7 @@ void BoundingBoxes::calculateVectorPolygons()
     float dist;
     bool repeat, found;
     // Compare all distances between boxes
-    for (int i = 0; i < boxes_.boxes.size(); i++)
+    for (int i = 0; i < boxes_.boxes.size(); ++i)
     {
         found = false;
         for (int j = i + 1; j < boxes_.boxes.size(); j++)
@@ -605,7 +600,7 @@ float BoundingBoxes::calculateDistance2Points(float x1, float y1, float z1, floa
 void BoundingBoxes::mergeBoundingBoxes()
 {
     // For each polygon create a bounding box
-    for (int i = 0; i < vec_vec_label_polygon_.size(); i++)
+    for (int i = 0; i < vec_vec_label_polygon_.size(); ++i)
     {
         pcl::PointCloud<pcl::PointXYZ> polygon_cloud_temp;
         vec_label_polygon_.clear();

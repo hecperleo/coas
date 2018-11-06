@@ -18,16 +18,16 @@ find_package(catkin REQUIRED COMPONENTS
 )
 find_package(Eigen3 REQUIRED)
 
-add_message_files(
-  FILES
-  VectorPointCloud.msg
-)
+#add_message_files(
+#  FILES
+#  VectorPointCloud.msg
+#)
 
-generate_messages(
-  DEPENDENCIES
-  std_msgs
-  sensor_msgs
-)
+#generate_messages(
+#  DEPENDENCIES
+#  std_msgs
+#  sensor_msgs
+#)
 
 catkin_package(
   INCLUDE_DIRS include
