@@ -12,7 +12,7 @@
     <node pkg="detection" type="bounding_boxes_node" name="bounding_boxes_node" output="screen" required="true"/>
     <node pkg="detection" type="matching_node" name="matching_node" output="screen" required="true"/>
 
-    <node pkg="obstacle_estimator" type="estimator_node" name="estimator_node" output="screen" required="true">
+    <node pkg="tracking" type="estimator_node" name="estimator_node" output="screen" required="true">
         <param name="estimator_rate" value="5.0" type="double" />
         <param name="lost_time_th" value="20.0" type="double" />
         <param name="min_update_count" value="0" type="int" />

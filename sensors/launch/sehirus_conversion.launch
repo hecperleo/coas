@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+	<node name="sehirus_listening_node" pkg="sensors" type="sehirus_conversion">
+		<!--
+		<remap from="heartbeat" to="heartbeat"/>
+		<remap from="basic_track_report" to="basic_track_report"/>
+		<remap from="normal_track_report" to="normal_track_report"/>
+		<remap from="extended_track_report" to="extended_track_report"/>
+		-->
+		<param name="heartbeat_listening_port" value="6500" type="int"/>
+		<param name="track_report_listening_port" value="6501" type="int"/>
+	</node>
+</launch>

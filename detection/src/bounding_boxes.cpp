@@ -1,4 +1,5 @@
 #include <detection/bounding_boxes.h>
+#include <tracking/CandidateMsg.h>
 
 BoundingBoxes::BoundingBoxes() : nh_()
 {
@@ -18,6 +19,9 @@ BoundingBoxes::BoundingBoxes() : nh_()
     pub_path_post_12_ = nh_.advertise<nav_msgs::Path>("/path_poste_12", 1);
     pub_path_post_13_ = nh_.advertise<nav_msgs::Path>("/path_poste_13", 1);
     pub_path_post_23_ = nh_.advertise<nav_msgs::Path>("/path_poste_23", 1);
+
+    // Candidate publisher
+    pub_candidates_ = nh_.advertise<tracking::CandidateMsg>("candidates",1);
 
     char *envvar_home;
     envvar_home = std::getenv("HOME");
@@ -646,6 +650,22 @@ void BoundingBoxes::mergeBoundingBoxes()
                                max_dist_x_polygon_, max_dist_y_polygon_, max_dist_z_polygon_, true);
     }
     pub_merge_boxes_.publish(merge_boxes_);
+
+    //TODO: Combine this code with the function constructBoundingBoxes
+    for(auto it = merge_boxes_.boxes.begin(); it != merge_boxes_.boxes.end(); ++it)
+    {
+        tracking::CandidateMsg candidate_msg;
+        candidate_msg.header.stamp = ros::Time::now();
+        candidate_msg.size = tracking::CandidateMsg::SIZE_UNKNOWN;
+        candidate_msg.location = it->pose.position;
+        candidate_msg.speed.x = 0.0;
+        candidate_msg.speed.y = 0.0;
+        //TODO: Adjust this covariance
+        std::vector<double> aux_covariance({2.0, 2.0, 2.0, 2.0});
+        candidate_msg.location_covariance = aux_covariance;
+        candidate_msg.speed_covariance = aux_covariance;
+        pub_candidates_.publish(candidate_msg);
+    }
 }
 
 void BoundingBoxes::getParameters()
