@@ -5,12 +5,12 @@ Matching::Matching()
     n = ros::NodeHandle();
 
     // Subscriptions
-    sub_path_post_2 = n.subscribe("/path_poste2", 1, &Matching::pathPost2Callback, this);
-    sub_path_post_3 = n.subscribe("/path_poste3", 1, &Matching::pathPost3Callback, this);
-    sub_path_post_1 = n.subscribe("/path_poste1", 1, &Matching::pathPost1Callback, this);
-    sub_path_post_12 = n.subscribe("/path_poste12", 1, &Matching::pathPost12Callback, this);
-    sub_path_post_13 = n.subscribe("/path_poste13", 1, &Matching::pathPost13Callback, this);
-    sub_path_post_23 = n.subscribe("/path_poste23", 1, &Matching::pathPost23Callback, this);
+    sub_path_post_1 = n.subscribe("/path_poste_1", 1, &Matching::pathPost1Callback, this);
+    sub_path_post_2 = n.subscribe("/path_poste_2", 1, &Matching::pathPost2Callback, this);
+    sub_path_post_3 = n.subscribe("/path_poste_3", 1, &Matching::pathPost3Callback, this);
+    sub_path_post_12 = n.subscribe("/path_poste_12", 1, &Matching::pathPost12Callback, this);
+    sub_path_post_13 = n.subscribe("/path_poste_13", 1, &Matching::pathPost13Callback, this);
+    sub_path_post_23 = n.subscribe("/path_poste_23", 1, &Matching::pathPost23Callback, this);
 
     // Publishers
     pub_marker_1 = n.advertise<visualization_msgs::Marker>("/marker_post_1", 1);
@@ -20,7 +20,11 @@ Matching::Matching()
     pub_marker_5 = n.advertise<visualization_msgs::Marker>("/marker_post_5", 1);
     pub_marker_6 = n.advertise<visualization_msgs::Marker>("/marker_post_6", 1);
 
-    logOutput = "/home/hector/matlab_ws/COAS/";
+    char *envvar_home;
+    envvar_home = std::getenv("HOME");
+    std::stringstream logOutputAux;
+    logOutputAux << envvar_home << "/Matlab_ws/";
+    logOutput = logOutputAux.str();
 
     file_post_1.open(logOutput + "matchPost1");
     file_post_2.open(logOutput + "matchPost2");
@@ -30,6 +34,8 @@ Matching::Matching()
     file_post_3_time.open(logOutput + "matchPost3time");
 
     counter = 0;
+
+    toDo();
 }
 
 Matching::~Matching()
@@ -252,7 +258,7 @@ void Matching::toDo()
     pub_marker_5.publish(marker_post_5);
     marker_post_6.action = visualization_msgs::Marker::DELETE;
     pub_marker_6.publish(marker_post_6);
-    // At the initial instant it storage the first entry as valid labels
+    // At the initial instant it stores the first entry as valid labels
     switch (counter)
     {
     case 0:
@@ -274,7 +280,7 @@ void Matching::toDo()
             (!now_path_post_13.poses.empty() && (!now_path_post_12.poses.empty() || !now_path_post_23.poses.empty())) ||
             (!now_path_post_23.poses.empty() && (!now_path_post_12.poses.empty() || !now_path_post_13.poses.empty())))
         {
-            // Storage the six relevant waypoints of the actual state in a vector
+            // Store the six relevant waypoints of the actual state in a vector
             if (!now_path_post_12.poses.empty())
             {
                 now_path_posts.poses.push_back(now_path_post_12.poses.at(0));

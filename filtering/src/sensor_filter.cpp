@@ -1,9 +1,12 @@
 #include <filtering/sensor_filter.h>
 
-SensorFilter::SensorFilter()
+SensorFilter::SensorFilter():
+n(),
+private_nh("~"),
+use_voxel_filter(true)
 {
-    n = ros::NodeHandle();
-
+    // Parameters
+    private_nh.getParam("use_voxel_filter", use_voxel_filter);
     // // Subscriptions
     // matrix_sub = n.subscribe("/v_map", 1, &SensorFilter::matrix_cb, this);
     sub_phase = n.subscribe("/phase", 1, &SensorFilter::phaseCallback, this);
@@ -16,11 +19,9 @@ SensorFilter::SensorFilter()
     range_dock = 10;
     range_sea = 100;
     cell_div;
-    rang = range_dock * cell_div;
-    rows = 2 * rang + 1;
-    columns = 2 * rang + 1;
-
-    loop();
+    range = range_dock * cell_div;
+    rows = 2 * range + 1;
+    columns = 2 * range + 1;
 }
 
 SensorFilter::~SensorFilter()
@@ -48,9 +49,9 @@ void SensorFilter::phaseCallback(const std_msgs::Int8 phase_mode)
         cell_div = 1; // Check this. Default = 2 but it was too slow.
         break;
     }
-    rang = range_dock * cell_div;
-    rows = 2 * rang + 1;
-    columns = 2 * rang + 1;
+    range = range_dock * cell_div;
+    rows = 2 * range + 1;
+    columns = 2 * range + 1;
 }
 
 void SensorFilter::sensorCallback(const sensor_msgs::PointCloud2 &cloud)
@@ -176,7 +177,7 @@ void SensorFilter::exploration(const sensor_msgs::PointCloud2 &cloud_3D_uas)
         }
     }
     // Indicate the cell where the vessel is.
-    V[rang][rang][0] = 4; //Position of the sensor (it is always the same because the map is local)
+    V[range][range][0] = 4; //Position of the sensor (it is always the same because the map is local)
 
     int tam = cloud_3D_uas.width * cloud_3D_uas.height;
 
@@ -192,9 +193,9 @@ void SensorFilter::exploration(const sensor_msgs::PointCloud2 &cloud_3D_uas)
         float cloud_dist = hypot(fil_cloud_XYZ->points[i].x, fil_cloud_XYZ->points[i].y);
         if (cloud_dist >= cloud_thres_distance)
         {
-            int iM = round(rang - cell_div * fil_cloud_XYZ->points[i].x);
-            int jM = round(rang - cell_div * fil_cloud_XYZ->points[i].y);
-            if (cloud_dist < rang && isInMap(iM, jM) == 1 && readV(V, iM, jM) != 4)
+            int iM = round(range - cell_div * fil_cloud_XYZ->points[i].x);
+            int jM = round(range - cell_div * fil_cloud_XYZ->points[i].y);
+            if (cloud_dist < range && isInMap(iM, jM) == 1 && readV(V, iM, jM) != 4)
             {
                 if (V[iM][jM][0] != 1)
                 {
@@ -248,9 +249,9 @@ void SensorFilter::exploration(const sensor_msgs::PointCloud2 &cloud_3D_uas)
         float cloud_dist = hypot(fil_cloud_XYZ->points[i].x, fil_cloud_XYZ->points[i].y);
         if (cloud_dist >= cloud_thres_distance)
         {
-            int iM = round(rang - cell_div * fil_cloud_XYZ->points[i].x);
-            int jM = round(rang - cell_div * fil_cloud_XYZ->points[i].y);
-            if (cloud_dist < rang && isInMap(iM, jM) == 1 && readV(V, iM, jM) != 4)
+            int iM = round(range - cell_div * fil_cloud_XYZ->points[i].x);
+            int jM = round(range - cell_div * fil_cloud_XYZ->points[i].y);
+            if (cloud_dist < range && isInMap(iM, jM) == 1 && readV(V, iM, jM) != 4)
             {
                 if (V[iM][jM][0] == 1 && V_map[iM][jM][0] == 0)
                 {
@@ -262,17 +263,40 @@ void SensorFilter::exploration(const sensor_msgs::PointCloud2 &cloud_3D_uas)
             }
         }
     }
-    //Convert the pointcloud to be used in ROS, using variable sensor_msgs::PointCloud2 output;
-    pcl::toROSMsg(*fil_data_cloud, filtered_cloud_3D);
+
+    if (use_voxel_filter)
+    {
+        //Before publishing the cloud apply a voxel filter to it
+        pcl::PointCloud<pcl::PointXYZ> voxel_filtered_cloud;
+        pcl::VoxelGrid<pcl::PointXYZ> voxelGridFilter;
+        voxelGridFilter.setInputCloud(fil_data_cloud);
+        voxelGridFilter.setLeafSize(0.08, 0.08, 0.08);
+        voxelGridFilter.filter(voxel_filtered_cloud);
+        pcl::toROSMsg(voxel_filtered_cloud, filtered_cloud_3D);  
+    }
+    else
+    {
+        pcl::toROSMsg(*fil_data_cloud, filtered_cloud_3D);
+    }
+
     filtered_cloud_3D.header.frame_id = "velodyne";
     filtered_cloud_3D.header.stamp = ros::Time();
+
     // Publish filtered cloud
     pub_filtered_cloud_3D.publish(filtered_cloud_3D);
 
     // GENERATE FILES TO CHECK THE OUTPUTS AND THE GENERATION OF THE MATRIX.
-    saveMatrix3D("/home/hector/Matlab_ws/matrix.txt", V, false);
-    saveMatrix3D("/home/hector/Matlab_ws/counter.txt", cont_V, false);
-    saveMatrix3D("/home/hector/Matlab_ws/map.txt", V_map, false);
+    char* envvar_home;
+    envvar_home = std::getenv("HOME");
+    std::stringstream matrix_filename;
+    std::stringstream counter_filename;
+    std::stringstream map_filename;
+    matrix_filename << envvar_home << "/Matlab_ws/matrix.txt";
+    counter_filename << envvar_home << "/Matlab_ws/counter.txt";
+    map_filename << envvar_home << "/Matlab_ws/map.txt";
+    saveMatrix3D(matrix_filename.str().c_str(), V, false);
+    saveMatrix3D(counter_filename.str().c_str(), cont_V, false);
+    saveMatrix3D(map_filename.str().c_str(), V_map, false);  
 }
 
 int SensorFilter::isInMap(int i, int j)
@@ -293,7 +317,7 @@ int SensorFilter::readV(const VVVI &V, int i, int j)
 }
 
 // FILE TO SAVE A MATRIX
-void SensorFilter::saveMatrix3D(char *file_name, const VVVI &m, bool vel)
+void SensorFilter::saveMatrix3D(const char *file_name, const VVVI &m, bool vel)
 {
     std::ofstream file;
     file.open(file_name);
@@ -313,11 +337,3 @@ void SensorFilter::saveMatrix3D(char *file_name, const VVVI &m, bool vel)
     file.close();
 }
 
-void SensorFilter::loop()
-{
-    while (ros::ok())
-    {
-        sleep(0.1);
-        ros::spinOnce();
-    }
-}
