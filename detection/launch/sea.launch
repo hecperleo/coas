@@ -1,5 +1,5 @@
 <launch>
-    <arg name="bags_path" doc="path to bag files" default="$/hector/media/bags" />
+    <arg name="bags_path" doc="path to bag files" default="$(env HOME)/bags" />
     <!-- Docking: 1 | Harbor: 2 | Sea: 3 -->
     <node pkg="rostopic" type="rostopic" name="phase" args="pub /phase std_msgs/Int8 3"/>
 
