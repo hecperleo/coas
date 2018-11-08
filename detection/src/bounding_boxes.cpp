@@ -661,7 +661,7 @@ void BoundingBoxes::mergeBoundingBoxes()
         candidate_msg.speed.x = 0.0;
         candidate_msg.speed.y = 0.0;
         //TODO: Adjust this covariance
-        std::vector<double> aux_covariance({2.0, 2.0, 2.0, 2.0});
+        std::vector<double> aux_covariance({0.5, 0.5, 0.5, 0.5});
         candidate_msg.location_covariance = aux_covariance;
         candidate_msg.speed_covariance = aux_covariance;
         pub_candidates_.publish(candidate_msg);

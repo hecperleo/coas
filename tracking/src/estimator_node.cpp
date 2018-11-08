@@ -74,6 +74,7 @@ EstimatorNode::EstimatorNode()
 
 	double lost_time_th, association_th;
 	int min_update_count;
+	bool use_mahalanobis_distance;
 
 	// Read parameters
 	pnh_->param<double>("estimator_rate", estimator_rate_, 5.0); 
@@ -82,9 +83,10 @@ EstimatorNode::EstimatorNode()
 	pnh_->param<double>("association_th", association_th, 6.0);
 	pnh_->param<double>("delay_max", delay_max_, 2.0);
 	pnh_->param<string>("reference_frame", reference_frame_,"/map");
+	pnh_->param<bool>("use_mahalanobis_distance", use_mahalanobis_distance, true);
 	
 	// Estimator and allocator
-	estimator_ = new CentralizedEstimator(association_th, lost_time_th, min_update_count);
+	estimator_ = new CentralizedEstimator(association_th, lost_time_th, min_update_count, use_mahalanobis_distance);
 	
 	// Subscriptions/publications
 	candidate_sub_ = nh_->subscribe<tracking::CandidateMsg>("candidates", 1, &EstimatorNode::candidatesReceived, this);
@@ -222,6 +224,11 @@ void EstimatorNode::publishBelief()
 			marker.header.frame_id = reference_frame_;    
 			marker.header.stamp = curr_time;
 
+			// Set the marker colors
+			marker.color.r = 0.5;
+			marker.color.g = 0.5;
+			marker.color.b = 0.5;
+			marker.color.a = 0.3;
 			// Set the namespace and id for this marker.  This serves to create a unique ID    
 			// Any marker sent with the same namespace and id will overwrite the old one    
 			marker.ns = "cov_ellipse";    
@@ -253,6 +260,7 @@ void EstimatorNode::publishBelief()
 			marker_array.markers.push_back(marker);
 
 			// Plot velocity
+			/*
 			marker.ns = "velocity";
 			marker.type = visualization_msgs::Marker::ARROW;    
 			marker.scale.x = sqrt(vx*vx+vy*vy);
@@ -266,6 +274,7 @@ void EstimatorNode::publishBelief()
 			}
 			
 			marker_array.markers.push_back(marker);
+			*/
 
 			// Plot target size
 			marker.ns = "target_size";

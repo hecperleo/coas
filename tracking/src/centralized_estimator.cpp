@@ -19,12 +19,13 @@ using namespace std;
 \param lost_th Time threshold to consider target lost
 \param min_update_count Minimum number of updates to consider a target consistent 
 */
-CentralizedEstimator::CentralizedEstimator(double lkhd_th, double lost_th, int min_update_count)
+CentralizedEstimator::CentralizedEstimator(double lkhd_th, double lost_th, int min_update_count, bool use_mahalanobis_distance)
 {
 	likelihood_th_ = lkhd_th;
 	lost_th_ = lost_th;
 	min_update_count_ = min_update_count;
 	track_id_count_ = 0;
+	f_use_maha_distance_ = use_mahalanobis_distance;
 }
 
 /// Destructor
@@ -83,7 +84,10 @@ bool CentralizedEstimator::update(vector<Candidate*> cand_list)
 		{
 			if(target_valid)
 			{		
-				likelihood = (it->second)->getMahaDistance(cand_list[i]);
+				if(f_use_maha_distance_)
+					likelihood = (it->second)->getMahaDistance(cand_list[i]);
+				else
+					likelihood = (it->second)->getDistance(cand_list[i]);
 				t_distances.push_back(likelihood);
 			}
 			else

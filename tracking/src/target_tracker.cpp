@@ -238,17 +238,12 @@ double TargetTracker::getMahaDistance(Candidate* z)
 	y(0,0) = z->location(0) - y(0,0);
 	y(1,0) = z->location(1) - y(1,0);
 
-	// Esto es una distancia al cuadrado
-	// no comparar directamente con la distancia devuelta por getDistance
+	// This is a squared distance
 	distance = y.transpose()*S.inverse()*y;
 	
 	double prob_z, prob_size = 0.0;
 
-	// Aquí tengo dudas, si esta parte del código esta bien
-	// creo que habría que usar un fact_bel auxiliar para no
-	// modificar el existente, ya que esta función se debe
-	// usar en la fase de matching entre los objetos previamente
-	// detectados y los nuevos
+	/*
 	for(int i = 0; i < N_SIZES; i++)
 	{
 		if(z->size == i)
@@ -259,11 +254,10 @@ double TargetTracker::getMahaDistance(Candidate* z)
 		prob_size += fact_bel_[OBJSIZE][i]*prob_z;
 	}
 
-	// Quizás habría que ajustar prob_size multiplicando por algún factor
-	// Y ajustar MIN_SIZE_DISTANCE a nuestro caso particular
+	//TODO: Adjust the threshold to this particular use case
 	if(prob_size < MIN_SIZE_DISTANCE)
 		distance = -1;
-
+	*/
 	return distance;
 }
 

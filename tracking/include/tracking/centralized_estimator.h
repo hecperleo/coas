@@ -24,7 +24,7 @@ class CentralizedEstimator
 {
 public:
 
-	CentralizedEstimator(double lkhd_th, double lost_th, int min_update_count);
+	CentralizedEstimator(double lkhd_th, double lost_th, int min_update_count, bool use_mahalanobis_distance);
 	~CentralizedEstimator();
 
 	void predict(double dt);
@@ -46,6 +46,7 @@ protected:
 	double lost_th_;							/// Maximum time threshold to lose target
 	int min_update_count_;						/// Minimum update counter to consider target consistent
 	int track_id_count_;						/// Counter of tracks identifiers
+	bool f_use_maha_distance_;					/// Flag: When true use Mahalanobis distance, when false use euclidean distance to match candidates and targets
 };
 
 #endif
