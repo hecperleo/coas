@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   message_generation
   jsk_recognition_msgs
+  tracking
 )
 find_package(Eigen3 REQUIRED)
 
@@ -32,7 +33,7 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES detection
-  CATKIN_DEPENDS roscpp rospy message_runtime jsk_recognition_msgs
+  CATKIN_DEPENDS roscpp rospy message_runtime jsk_recognition_msgs tracking
   DEPENDS EIGEN3
 )
 
@@ -41,11 +42,6 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
 )
-
-#find_package(octomap REQUIRED)
-#include_directories(${OCTOMAP_INCLUDE_DIRS})
-#link_directories(${OCTOMAP_LIBRARY_DIRS})
-#target_link_libraries(${OCTOMAP_LIBRARIES})
 
 #include_directories(src ${EIGEN3_INCLUDE_DIR})
 

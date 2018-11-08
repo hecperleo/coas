@@ -1,0 +1,25 @@
+<launch>
+    <arg name="bags_path" doc="path to bag files" default="$(env HOME)/bags"/>
+    <!-- Docking: 1 | Harbor: 2 | Sea: 3 -->
+    <node pkg="rostopic" type="rostopic" name="phase" args="pub /phase std_msgs/Int8 1"/>
+
+    <node pkg="rosbag" type="play" name="rosbag" args="--clock -s 25 -u 22 $(arg bags_path)/postes/2018-08-02-10-13-51.bag" required="true"/>
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find detection)/rviz/docking.rviz" required="true"/>
+
+    <node pkg="filtering" type="sensor_filter_node" name="sensor_filter_node" output="screen" required="true">
+    	<param name="use_voxel_filter" value="true" type="bool"/>
+    </node>
+    <node pkg="detection" type="bounding_boxes_node" name="bounding_boxes_node" output="screen" required="true"/>
+    <node pkg="detection" type="matching_node" name="matching_node" output="screen" required="true"/>
+
+    <node pkg="tracking" type="estimator_node" name="estimator_node" output="screen" required="true">
+        <param name="estimator_rate" value="5.0" type="double" />
+        <param name="lost_time_th" value="20.0" type="double" />
+        <param name="min_update_count" value="0" type="int" />
+        <param name="association_th" value="6.0" type="double" /> <!-- Max distance to accept a match between target and candidate -->
+        <param name="delay_max" value="2.0" type="double" />
+        <param name="reference_frame"  value="/velodyne" type="str" />
+        <remap from="candidates" to="candidates"/>
+        <remap from="targets_belief" to="targets_belief"/>
+    </node>
+</launch>

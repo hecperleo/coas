@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(tracking)
+project(sensors)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
@@ -7,20 +7,11 @@ add_compile_options(-std=c++11)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS
-  jsk_recognition_msgs
-  roscpp
-  message_generation
-  visualization_msgs
-  geometry_msgs
-  std_msgs
-  tf2
-)
+find_package(catkin REQUIRED roscpp message_generation)
 
 ## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
-
-find_package(Eigen3 REQUIRED)
+find_package(Boost REQUIRED COMPONENTS system thread)
+find_package(Threads)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -54,7 +45,10 @@ find_package(Eigen3 REQUIRED)
 ## Generate messages in the 'msg' folder
  add_message_files(
    FILES
-   CandidateMsg.msg
+   SehirusHeartbeat.msg
+   SehirusBasicTrackReport.msg
+   SehirusNormalTrackReport.msg
+   SehirusExtendedTrackReport.msg
  )
 
 ## Generate services in the 'srv' folder
@@ -72,11 +66,10 @@ find_package(Eigen3 REQUIRED)
 # )
 
 ## Generate added messages and services with any dependencies listed here
-generate_messages(
+ generate_messages(
    DEPENDENCIES
-   geometry_msgs
-   std_msgs
-)
+   #std_msgs  
+ )
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -108,11 +101,10 @@ generate_messages(
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  INCLUDE_DIRS include
-#  LIBRARIES
-  CATKIN_DEPENDS jsk_recognition_msgs roscpp message_runtime visualization_msgs geometry_msgs
-  std_msgs tf2
-  DEPENDS eigen
+#  INCLUDE_DIRS include
+#  LIBRARIES 
+  CATKIN_DEPENDS roscpp
+  DEPENDS Boost
 )
 
 ###########
@@ -124,12 +116,13 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
-  ${EIGEN3_INCLUDE_DIRS}
+  ${Boost_INCLUDE_DIRS}
+  ${Threads_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/tracking.cpp
+#   src/${PROJECT_NAME}/sensors.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -140,7 +133,9 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/tracking_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/sensors_node.cpp)
+
+add_executable(sehirus_conversion src/sehirus_conversion.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -151,23 +146,14 @@ include_directories(
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(sehirus_conversion ${catkin_EXPORTED_TARGETS} ${sensors_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
 
-add_library(boxes_tracker src/boxes_tracker.cpp)
-add_dependencies(boxes_tracker ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
-add_executable(boxes_tracker_node src/boxes_tracker_node.cpp)
-target_link_libraries(boxes_tracker_node boxes_tracker ${catkin_LIBRARIES})
-add_dependencies(boxes_tracker_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
-add_executable(estimator_node src/estimator_node.cpp src/centralized_estimator.cpp src/target_tracker.cpp include/tracking/timer.hpp)
-add_dependencies(estimator_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(estimator_node ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
-
+target_link_libraries (sehirus_conversion ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${Threads_LIBRARIES})
 #############
 ## Install ##
 #############
@@ -208,7 +194,7 @@ target_link_libraries(estimator_node ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_tracking.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_sensors.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

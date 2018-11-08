@@ -55,6 +55,8 @@ private:
   ros::Publisher pub_boxes_, pub_merge_boxes_, pub_reference_boxes_;
   ros::Publisher pub_path_post_1_, pub_path_post_2_, pub_path_post_3_; 
   ros::Publisher pub_path_post_12_, pub_path_post_13_, pub_path_post_23_;
+  // Candidates Publisher
+  ros::Publisher pub_candidates_;
 
   // Variables
   int counter_posts_ = 0;
