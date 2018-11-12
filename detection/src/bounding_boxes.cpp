@@ -1,6 +1,10 @@
 #include <detection/bounding_boxes.h>
 #include <tracking/CandidateMsg.h>
 
+#define DOCKING 1
+#define HARBOR 2
+#define SEA 3
+
 BoundingBoxes::BoundingBoxes() : nh_()
 {
     // params();
@@ -63,7 +67,7 @@ void BoundingBoxes::phaseCallback(const std_msgs::Int8 phaseMode)
     switch (phase_)
     {
     // Docking
-    case 1:
+    case DOCKING:
         // Euclidean Clusterer Parameters
         distance_threshold_ = 0.4;
         cluster_tolerance_ = 0.8;
@@ -80,8 +84,8 @@ void BoundingBoxes::phaseCallback(const std_msgs::Int8 phaseMode)
         min_distance_post_13_ = 8.5;
         max_distance_post_13_ = 8.8;
         break;
-    // Harbor_
-    case 2:
+    // Harbor
+    case HARBOR:
         // Euclidean Clusterer Parameters
         distance_threshold_ = 0.5;
         cluster_tolerance_ = 0.8;
@@ -99,7 +103,7 @@ void BoundingBoxes::phaseCallback(const std_msgs::Int8 phaseMode)
         max_distance_post_13_ = 17.0;
         break;
     // Sea
-    case 3:
+    case SEA:
         // Euclidean Clusterer Parameters
         distance_threshold_ = 0.5;
         cluster_tolerance_ = 0.8;
@@ -470,6 +474,27 @@ void BoundingBoxes::checkPostDimension(float xDim, float yDim, float zDim)
         pub_path_post_12_.publish(path_post_12_);
         pub_path_post_13_.publish(path_post_13_);
         pub_path_post_23_.publish(path_post_23_);
+
+        // OBSTACLE ESTIMATOR
+        // If the docking phase is active, send reference boxes as candidates
+        if(phase_ == DOCKING)
+        {
+            for(auto it = reference_boxes_.boxes.begin(); it != reference_boxes_.boxes.end(); ++it)
+            {
+                tracking::CandidateMsg candidate_msg;
+                candidate_msg.header.stamp = ros::Time::now();
+                candidate_msg.size = tracking::CandidateMsg::SIZE_UNKNOWN;
+                candidate_msg.location = it->pose.position;
+                candidate_msg.speed.x = 0.0;
+                candidate_msg.speed.y = 0.0;
+                candidate_msg.speed.z = 0.0;
+                //TODO: Adjust this covariance
+                std::vector<double> aux_covariance({0.3, 0.1, 0.1, 0.3});
+                candidate_msg.location_covariance = aux_covariance;
+                candidate_msg.speed_covariance = aux_covariance;
+                pub_candidates_.publish(candidate_msg);
+            }
+        }
         // Save logs
         saveDistances(true, path_post_1_, path_post_2_, path_post_3_);
         saveDistances(false, path_post_12_, path_post_13_, path_post_23_);
@@ -651,20 +676,26 @@ void BoundingBoxes::mergeBoundingBoxes()
     }
     pub_merge_boxes_.publish(merge_boxes_);
 
-    //TODO: Combine this code with the function constructBoundingBoxes
-    for(auto it = merge_boxes_.boxes.begin(); it != merge_boxes_.boxes.end(); ++it)
+    // OBSTACLE ESTIMATOR
+    // If the phase is HARBOR or SEA send merge_boxes_ as candidates
+    if(phase_ != DOCKING)
     {
-        tracking::CandidateMsg candidate_msg;
-        candidate_msg.header.stamp = ros::Time::now();
-        candidate_msg.size = tracking::CandidateMsg::SIZE_UNKNOWN;
-        candidate_msg.location = it->pose.position;
-        candidate_msg.speed.x = 0.0;
-        candidate_msg.speed.y = 0.0;
-        //TODO: Adjust this covariance
-        std::vector<double> aux_covariance({0.5, 0.5, 0.5, 0.5});
-        candidate_msg.location_covariance = aux_covariance;
-        candidate_msg.speed_covariance = aux_covariance;
-        pub_candidates_.publish(candidate_msg);
+        //TODO: Combine this code with the function constructBoundingBoxes
+        for(auto it = merge_boxes_.boxes.begin(); it != merge_boxes_.boxes.end(); ++it)
+        {
+            tracking::CandidateMsg candidate_msg;
+            candidate_msg.header.stamp = ros::Time::now();
+            candidate_msg.size = tracking::CandidateMsg::SIZE_UNKNOWN;
+            candidate_msg.location = it->pose.position;
+            candidate_msg.speed.x = 0.0;
+            candidate_msg.speed.y = 0.0;
+            candidate_msg.speed.z = 0.0;
+            //TODO: Adjust this covariance
+            std::vector<double> aux_covariance({0.3, 0.1, 0.1, 0.3});
+            candidate_msg.location_covariance = aux_covariance;
+            candidate_msg.speed_covariance = aux_covariance;
+            pub_candidates_.publish(candidate_msg);
+        } 
     }
 }
 

@@ -8,6 +8,7 @@
 //------------------------------------------------------------------------------
 
 #include <tracking/target_tracker.h>
+#include <iostream>
 
 #define VEL_NOISE_VAR 0.2 
 #define SIZE_DETECTOR_PD 0.9

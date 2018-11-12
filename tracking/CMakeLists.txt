@@ -164,9 +164,12 @@ add_executable(boxes_tracker_node src/boxes_tracker_node.cpp)
 target_link_libraries(boxes_tracker_node boxes_tracker ${catkin_LIBRARIES})
 add_dependencies(boxes_tracker_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-add_executable(estimator_node src/estimator_node.cpp src/centralized_estimator.cpp src/target_tracker.cpp include/tracking/timer.hpp)
+add_executable(estimator_node src/estimator_node.cpp src/centralized_estimator.cpp 
+                src/target_tracker.cpp include/tracking/timer.hpp
+                include/tracking/random_color_generator.hpp)
 add_dependencies(estimator_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(estimator_node ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
+#target_link_libraries(estimator_node random_color_generator ${catkin_LIBRARIES} ${EIGEN3_LIBRARIES})
 
 #############
 ## Install ##

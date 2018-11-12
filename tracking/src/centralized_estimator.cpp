@@ -146,9 +146,9 @@ bool CentralizedEstimator::update(vector<Candidate*> cand_list)
 			#endif
 
 			targets_[valid_targets[best_pair.first]]->update(cand_list[best_pair.second]);
-			// Podríamos hacer lo siguiente cuando encontramos una correspondencia
+			// When a match is found, the next sentence could be executed
 			// valid_targets[best_pair.first] = -1
-			// Pero puede ser que haya varios candidatos que se correspondan con el mismo target
+			// But maybe several candidates could match the same target and we are interested in that behaviour
 		}
 		else
 		{
@@ -170,7 +170,10 @@ bool CentralizedEstimator::update(vector<Candidate*> cand_list)
 			{
 				if(valid_candidates[i] != -1)
 				{		
-					likelihood = targets_[new_target_id]->getMahaDistance(cand_list[i]);
+					if(f_use_maha_distance_)
+						likelihood = targets_[new_target_id]->getMahaDistance(cand_list[i]);
+					else
+						likelihood = targets_[new_target_id]->getDistance(cand_list[i]);
 					t_distances.push_back(likelihood);
 				}
 				else
@@ -323,9 +326,12 @@ void CentralizedEstimator::removeLostTargets()
 	while(it != targets_.end())
 	{		
 		//TODO: target status is never LOST so this check doesn't make sense now
+		/*
 		if( ((it->second)->getStatus() == LOST) 
-		|| ((it->second)->isStatic() == false && (it->second)->lastUpdateTime() > lost_th_ && (it->second)->getUpdateCount() < min_update_count_) 
-		|| ((it->second)->isStatic() == true && (it->second)->lastUpdateTime() > lost_th_ && (it->second)->getUpdateCount() < min_update_count_) )
+		|| ((it->second)->lastUpdateTime() > lost_th_ && (it->second)->getUpdateCount() < min_update_count_) 
+		|| ((it->second)->lastUpdateTime() > lost_th_ && (it->second)->getUpdateCount() < min_update_count_) )
+		*/
+		if( (it->second)->lastUpdateTime() > lost_th_ )
 		{
 			delete(it->second);
 			it = targets_.erase(it);

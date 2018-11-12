@@ -13,7 +13,10 @@
 #include <tracking/candidate.h>
 #include <tracking/CandidateMsg.h>
 
+#include <tracking/random_color_generator.hpp>
+
 #include <visualization_msgs/MarkerArray.h>
+#include <std_msgs/ColorRGBA.h>
 #include <tf2/utils.h>
 
 #include <string>
@@ -62,6 +65,12 @@ protected:
 
 	/// Centralized filter for target estimation 
 	CentralizedEstimator* estimator_;
+
+	/// Map to associate a color with each target id, for visualization purposes
+	map<int, std_msgs::ColorRGBA> target_visualization_colors_;
+
+	/// Random color generator
+	RandomColorGenerator random_color_generator_;
 	
 };
 
@@ -224,15 +233,31 @@ void EstimatorNode::publishBelief()
 			marker.header.frame_id = reference_frame_;    
 			marker.header.stamp = curr_time;
 
-			// Set the marker colors
-			marker.color.r = 0.5;
-			marker.color.g = 0.5;
-			marker.color.b = 0.5;
-			marker.color.a = 0.3;
+			// Check if the target has an associated color, if not generate one and save it
+			auto it = target_visualization_colors_.find(active_targets[i]);
+			if(it != target_visualization_colors_.end())
+			{
+				// Set the marker colors as saved
+				marker.color.r = it -> second.r;
+				marker.color.g = it -> second.g;
+				marker.color.b = it -> second.b;
+				marker.color.a = it -> second.a;
+			}
+			else
+			{
+				std_msgs::ColorRGBA aux_color;
+				// Generate new marker colors and save them
+				aux_color = random_color_generator_.generateColor();
+				aux_color.a = 0.3;
+				//target_visualization_colors_.insert( pair<int,std_msgs::ColorRGBA>(active_targets[i], aux_color) );
+				target_visualization_colors_[active_targets[i]] = aux_color;
+				marker.color = aux_color;
+			}
+
 			// Set the namespace and id for this marker.  This serves to create a unique ID    
 			// Any marker sent with the same namespace and id will overwrite the old one    
 			marker.ns = "cov_ellipse";    
-			marker.id = i;
+			marker.id = active_targets[i];
 		
 			// Set the marker type    
 			marker.type = visualization_msgs::Marker::SPHERE;
@@ -276,6 +301,11 @@ void EstimatorNode::publishBelief()
 			marker_array.markers.push_back(marker);
 			*/
 
+			marker.color.r = 1.0;
+			marker.color.g = 1.0;
+			marker.color.b = 1.0;
+			marker.color.a = 1.0;
+
 			// Plot target size
 			marker.ns = "target_size";
 			marker.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
@@ -283,7 +313,6 @@ void EstimatorNode::publishBelief()
 			marker.pose.position.x -= 1.0;
 			marker.pose.position.y -= 1.0;    
 			marker.scale.z = 1.0;
-			
 			marker_array.markers.push_back(marker);
 
 			// Plot target ID
