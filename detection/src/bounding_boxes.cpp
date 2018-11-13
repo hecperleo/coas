@@ -14,6 +14,7 @@ BoundingBoxes::BoundingBoxes() : nh_()
     sub_phase_ = nh_.subscribe("/phase", 1, &BoundingBoxes::phaseCallback, this);
 
     // Publishers
+    pub_cloud_clusters_ = nh_.advertise<sensor_msgs::PointCloud2>("/visualization_clusters", 1);
     pub_boxes_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("/bounding_boxes", 1);
     pub_merge_boxes_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("/merge_bounding_boxes", 1);
     pub_reference_boxes_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("/reference_bounding_boxes", 1);
@@ -45,6 +46,10 @@ BoundingBoxes::BoundingBoxes() : nh_()
     file_post_3_time_.open(log_output_ + "post3time");
 
     contTest_ = contTestPose_ = 0;
+
+    // Set reference frame for the messages that are sent
+    box_.header.frame_id = boxes_.header.frame_id = "/velodyne";
+    reference_boxes_.header.frame_id = merge_boxes_.header.frame_id = "/velodyne";
 }
 
 BoundingBoxes::~BoundingBoxes()
@@ -184,45 +189,59 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
             downsampled_XYZ.swap(cloud_f);
         }
     }
-    // Creating the KdTree object for the search method of the extraction
-    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
-    tree->setInputCloud(downsampled_XYZ);
-
     std::vector<pcl::PointIndices> cluster_indices;
-    pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-    ec.setClusterTolerance(cluster_tolerance_); // default = 0.02 (2cm)
-    ec.setMinClusterSize(min_cluster_size_);    // Sea = 2 // Docking = 30 // default = 100
-    ec.setMaxClusterSize(max_cluster_size_);
-    ec.setSearchMethod(tree);
-    ec.setInputCloud(downsampled_XYZ);
-    ec.extract(cluster_indices);
-
-    // Create a publisher for each cluster
-    for (int i = 0; i < cluster_indices.size(); ++i)
+    if (!downsampled_XYZ->points.empty())
     {
-        std::string topicName = "/cluster" + boost::lexical_cast<std::string>(i);
-        ros::Publisher pub = nh_.advertise<sensor_msgs::PointCloud2>(topicName, 1);
-        pub_vec_point_clouds_.push_back(pub);
+        // Creating the KdTree object for the search method of the extraction
+        pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
+        tree->setInputCloud(downsampled_XYZ);
+
+        pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
+        ec.setClusterTolerance(cluster_tolerance_); // default = 0.02 (2cm)
+        ec.setMinClusterSize(min_cluster_size_);    // Sea = 2 // Docking = 30 // default = 100
+        ec.setMaxClusterSize(max_cluster_size_);
+        ec.setSearchMethod(tree);
+        ec.setInputCloud(downsampled_XYZ);
+        ec.extract(cluster_indices);
     }
+
     std::vector<pcl::PointCloud<pcl::PointXYZ>> clusters_vector;
+    pcl::PointCloud<pcl::PointXYZL>::Ptr cloud_clusters(new pcl::PointCloud<pcl::PointXYZL>);
     int j = 0;
     for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin(); it != cluster_indices.end(); ++it)
     {
-        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster(new pcl::PointCloud<pcl::PointXYZ>);
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster_aux(new pcl::PointCloud<pcl::PointXYZ>);
+        // Extract each cluster from the original cloud using indices
         for (std::vector<int>::const_iterator pit = it->indices.begin(); pit != it->indices.end(); pit++)
-            cloud_cluster->points.push_back(downsampled_XYZ->points[*pit]);
-        cloud_cluster->width = cloud_cluster->points.size();
-        cloud_cluster->height = 1;
-        cloud_cluster->is_dense = true;
+        {
+            // First save cluster points for bounding box algorithm
+            cloud_cluster_aux->points.push_back(downsampled_XYZ->points[*pit]);
 
-        clusters_vector.push_back(*cloud_cluster);
-        // Convert the point cloud into a typed message to be used in ROS
-        sensor_msgs::PointCloud2::Ptr output(new sensor_msgs::PointCloud2);
-        pcl::toROSMsg(*cloud_cluster, *output);
-        output->header.frame_id = input_cloud->header.frame_id;
-        pub_vec_point_clouds_[j].publish(output);
+            // Then add points to a point cloud for visualization
+            pcl::PointXYZL point;
+            // For differentiate each cluster, we add a different intensity value
+            point.label = j;
+            point.x = downsampled_XYZ->points[*pit].x;
+            point.y = downsampled_XYZ->points[*pit].y;
+            point.z = downsampled_XYZ->points[*pit].z;
+            cloud_clusters->points.push_back(point);
+        }
+        cloud_cluster_aux->width = cloud_cluster_aux->points.size();
+        cloud_cluster_aux->height = 1;
+        cloud_cluster_aux->is_dense = true;
+        clusters_vector.push_back(*cloud_cluster_aux);
         j++;
     }
+    cloud_clusters->width = cloud_clusters->points.size();
+    cloud_clusters->height = 1;
+    cloud_clusters->is_dense = true;
+
+    // Convert the point cloud into a typed message to be used in ROS
+    sensor_msgs::PointCloud2::Ptr output(new sensor_msgs::PointCloud2);
+    pcl::toROSMsg(*cloud_clusters, *output);
+    output->header.frame_id = input_cloud->header.frame_id;
+    // Publish the pointcloud with all the clusters, with a field that identifies which cluster a points belongs to
+    pub_cloud_clusters_.publish(output);
 
     std::cout << "[ EUCL] Time: " << ros::Time::now().toSec() - time_start << std::endl;
 
@@ -235,10 +254,6 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
         // Work with every single cluster
         for (int i = 0; i < clusters_vector.size(); ++i)
         {
-            // Reinitialize variables
-            resetVariables();
-            // Calculate centroid of the cluster
-            pcl::compute3DCentroid(clusters_vector[i], centroid_);
             // Calculate maximum distances of the cluster
             calculateMaxDistancesCluster(clusters_vector[i]);
             // Calculate center of the cluster
@@ -260,16 +275,6 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
     cleanVariables();
 }
 
-void BoundingBoxes::resetVariables()
-{
-    max_dist_x_ = max_dist_y_ = max_dist_z_ = 0;
-    x_max_ = x_min_ = y_max_ = y_min_ = z_max_ = z_min_ = 0;
-    x_center_ = y_center_ = z_center_ = 0;
-    box_.header.frame_id = boxes_.header.frame_id = "velodyne";
-    reference_boxes_.header.frame_id = merge_boxes_.header.frame_id = "velodyne";
-    centroid_[0] = centroid_[1] = centroid_[2] = centroid_[3] = 0.0;
-}
-
 void BoundingBoxes::cleanVariables()
 {
     vec_vec_label_polygon_.clear();
@@ -289,10 +294,14 @@ void BoundingBoxes::cleanVariables()
 
 void BoundingBoxes::calculateMaxDistancesCluster(const pcl::PointCloud<pcl::PointXYZ> cluster)
 {
+    // Reset variables specific to this function
+    max_dist_x_ = max_dist_y_ = max_dist_z_ = 0;
+    x_max_ = x_min_ = y_max_ = y_min_ = z_max_ = z_min_ = 0;
     // Compare every single point with the rest of the point cloud
     for (int i = 0; i < cluster.points.size(); ++i)
     {
-        for (int j = 0; j < cluster.points.size(); ++j)
+        // Don't calculate the distance between a point and itself
+        for (int j = 0; (j < cluster.points.size()) && (j != i); ++j)
         {
             // Storage the largest distance in X
             if (max_dist_x_ < fabs(cluster.points[i].x - cluster.points[j].x))
@@ -345,16 +354,8 @@ void BoundingBoxes::calculateMaxDistancesCluster(const pcl::PointCloud<pcl::Poin
 
 void BoundingBoxes::calculateCenters()
 {
-    if (max_dist_x_ > max_dist_y_)
-    {
-        x_center_ = x_min_ + (max_dist_x_ / 2);
-        y_center_ = y_min_ + (max_dist_y_ / 2);
-    }
-    if (max_dist_x_ < max_dist_y_)
-    {
-        x_center_ = x_min_ + (max_dist_x_ / 2);
-        y_center_ = y_min_ + (max_dist_y_ / 2);
-    }
+    x_center_ = x_min_ + (max_dist_x_ / 2);
+    y_center_ = y_min_ + (max_dist_y_ / 2);
     z_center_ = z_min_ + (max_dist_z_ / 2);
 }
 

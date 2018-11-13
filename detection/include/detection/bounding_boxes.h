@@ -1,3 +1,6 @@
+#ifndef BOUNDING_BOXES_H_
+#define BOUNDING_BOXES_H_
+
 #include <cmath>
 #include <fstream>
 #include <ros/ros.h>
@@ -28,8 +31,6 @@ private:
   //
   void getParameters();
   void calculateCenters();
-  void postProcess();
-  void resetVariables();
   void cleanVariables();
   void calculateVectorPolygons();
   void mergeBoundingBoxes();
@@ -49,8 +50,7 @@ private:
   ros::Subscriber sub_phase_;
   
   // Cluster Publishers
-  ros::Publisher pub_point_clouds_;
-  std::vector<ros::Publisher> pub_vec_point_clouds_;
+  ros::Publisher pub_cloud_clusters_;
   // Bounding Boxer Publishers
   ros::Publisher pub_boxes_, pub_merge_boxes_, pub_reference_boxes_;
   ros::Publisher pub_path_post_1_, pub_path_post_2_, pub_path_post_3_; 
@@ -60,7 +60,6 @@ private:
 
   // Variables
   int counter_posts_ = 0;
-  Eigen::Vector4f centroid_;
   int label_box_, label_merge_box_;
   std::vector<int> vec_label_polygon_;
   std::vector<std::vector<int>> vec_vec_label_polygon_;
@@ -86,3 +85,5 @@ private:
   float close_distance_, xy_min_post_, xy_max_post_, z_min_post_, z_max_post_;
   float min_distance_post_12_, max_distance_post_12_, min_distance_post_13_, max_distance_post_13_;
 };
+
+#endif

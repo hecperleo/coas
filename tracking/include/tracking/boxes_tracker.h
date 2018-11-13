@@ -36,9 +36,13 @@ private:
   std::ofstream file_merge_box_1_times;
   std::ofstream file_merge_box_2_times;
   std::ofstream file_merge_box_3_times;
+  std::ofstream file_merge_box_1_times_abs;
+  std::ofstream file_merge_box_2_times_abs;
+  std::ofstream file_merge_box_3_times_abs;
 
   bool flag_tracking_started_; // Flag to signal that the first box has been received
                               // and the time values written to files are calculated from
                               // that moment on
+  bool flag_first_box_received_;
   double time_first_box_received_;
 };

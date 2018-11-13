@@ -112,7 +112,7 @@ catkin_package(
 #  LIBRARIES
   CATKIN_DEPENDS jsk_recognition_msgs roscpp message_runtime visualization_msgs geometry_msgs
   std_msgs tf2
-  DEPENDS eigen
+  DEPENDS EIGEN3
 )
 
 ###########

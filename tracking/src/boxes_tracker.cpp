@@ -17,9 +17,16 @@ nh_()
   	file_merge_box_2_times.open(log_output + "Test_Pos_Merge_BBXS_Sea/mergeBox2time");
   	// file_merge_box_3_times.open(log_output + "Test_Pos_Merge_BBXS_Sea/mergeBox3time");
 
+  	file_merge_box_1_times_abs.open(log_output + "Test_Pos_Merge_BBXS_Sea/mergeBox1timeAbs");
+  	file_merge_box_2_times_abs.open(log_output + "Test_Pos_Merge_BBXS_Sea/mergeBox2timeAbs");
+  	// file_merge_box_3_times_abs.open(log_output + "Test_Pos_Merge_BBXS_Sea/mergeBox3timeAbs");
+
 	sub_bounding_box_array = nh_.subscribe("/merge_bounding_boxes", 1, &BoxesTracker::boundingBoxesCallback, this);
 	pub_bounding_box_array = nh_.advertise<BoundingBoxArray>("/tracked_bounding_boxes", 1);
 	bounding_boxes_past_.header.frame_id = "velodyne";
+
+	flag_tracking_started_ = false;
+	flag_first_box_received_ = false;
 }
 
 BoxesTracker::~BoxesTracker()
@@ -38,6 +45,7 @@ void BoxesTracker::boundingBoxesCallback(const BoundingBoxArrayConstPtr &input_b
 	ROS_INFO_STREAM("Input array size : " << input_bounding_box_array->boxes.size());
 	for(i=0; i < input_bounding_box_array->boxes.size(); i++)
 	{
+		flag_first_box_received_ = true;
 		ROS_INFO_STREAM("Input box : " << i);
 		// Set min_distance to infinity
 		double min_distance = std::numeric_limits<double>::infinity();
@@ -107,34 +115,46 @@ void BoxesTracker::boundingBoxesCallback(const BoundingBoxArrayConstPtr &input_b
 	// Publish the new bounding box array in /tracked_bounding_boxes topic
 	pub_bounding_box_array.publish(bounding_boxes_past_);
 
+	double time_now;
 	// Save poses and time of the boxes to plot them in matlab
-	if (!flag_tracking_started_)
-    {
-        time_first_box_received_ = ros::Time::now().toSec();
-        flag_tracking_started_ = true;
-    }
-    for (int i = 0; i < bounding_boxes_past_.boxes.size(); i++)
-    {
-        switch (bounding_boxes_past_.boxes.size())
-        {
-        	case 1:
-            	file_merge_box_1_poses << bounding_boxes_past_.boxes.at(0).pose.position.x << " " << bounding_boxes_past_.boxes.at(0).pose.position.y << std::endl;
-            	file_merge_box_1_times << ros::Time::now().toSec() - time_first_box_received_ << std::endl;
-            	break;
-        	case 2:
-            	file_merge_box_1_poses << bounding_boxes_past_.boxes.at(0).pose.position.x << " " << bounding_boxes_past_.boxes.at(0).pose.position.y << std::endl;
-            	file_merge_box_1_times << ros::Time::now().toSec() - time_first_box_received_ << std::endl;
-            	file_merge_box_2_poses << bounding_boxes_past_.boxes.at(1).pose.position.x << " " << bounding_boxes_past_.boxes.at(1).pose.position.y << std::endl;
-            	file_merge_box_2_times << ros::Time::now().toSec() - time_first_box_received_ << std::endl;
-            	break;
-        	// case 3:
-         //    	file_merge_box_1_poses << bounding_boxes_past_.boxes.at(0).pose.position.x << " " << bounding_boxes_past_.boxes.at(0).pose.position.y << std::endl;
-         //    	file_merge_box_1_times << ros::Time::now().toSec() - time_first_box_received_ << std::endl;
-         //    	file_merge_box_2_poses << bounding_boxes_past_.boxes.at(1).pose.position.x << " " << bounding_boxes_past_.boxes.at(1).pose.position.y << std::endl;
-         //    	file_merge_box_2_times << ros::Time::now().toSec() - time_first_box_received_ << std::endl;
-         //    	file_merge_box_3_poses << bounding_boxes_past_.boxes.at(2).pose.position.x << " " << bounding_boxes_past_.boxes.at(2).pose.position.y << std::endl;
-         //    	file_merge_box_3_times << ros::Time::now().toSec() - time_first_box_received_ << std::endl;
-         //    	break;
-        }
-    }
+	if (flag_first_box_received_)
+	{
+		if (!flag_tracking_started_)
+    	{
+    	    time_first_box_received_ = ros::Time::now().toSec();
+    	    time_now = time_first_box_received_;
+    	    flag_tracking_started_ = true;
+    	}
+    	else
+    	{
+    		time_now = ros::Time::now().toSec();
+    	}
+    	for (int i = 0; i < bounding_boxes_past_.boxes.size(); i++)
+    	{
+    	    switch (bounding_boxes_past_.boxes.size())
+    	    {
+    	    	case 1:
+    	        	file_merge_box_1_poses << bounding_boxes_past_.boxes.at(0).pose.position.x << " " << bounding_boxes_past_.boxes.at(0).pose.position.y << std::endl;
+    	        	file_merge_box_1_times << time_now - time_first_box_received_ << std::endl;
+    	        	file_merge_box_1_times_abs << std::fixed << std::setprecision(2) << time_now << std::endl;
+    	        	break;
+    	    	case 2:
+    	        	file_merge_box_1_poses << bounding_boxes_past_.boxes.at(0).pose.position.x << " " << bounding_boxes_past_.boxes.at(0).pose.position.y << std::endl;
+    	        	file_merge_box_1_times << time_now - time_first_box_received_ << std::endl;
+    	        	file_merge_box_1_times_abs << std::fixed << std::setprecision(2) << time_now << std::endl;
+    	        	file_merge_box_2_poses << bounding_boxes_past_.boxes.at(1).pose.position.x << " " << bounding_boxes_past_.boxes.at(1).pose.position.y << std::endl;
+    	        	file_merge_box_2_times << time_now - time_first_box_received_ << std::endl;
+    	        	file_merge_box_2_times_abs << std::fixed << std::setprecision(2) << time_now << std::endl;
+    	        	break;
+    	    // case 3:
+    	    //    	file_merge_box_1_poses << bounding_boxes_past_.boxes.at(0).pose.position.x << " " << bounding_boxes_past_.boxes.at(0).pose.position.y << std::endl;
+    	    //    	file_merge_box_1_times << time_now - time_first_box_received_ << std::endl;
+    	    //    	file_merge_box_2_poses << bounding_boxes_past_.boxes.at(1).pose.position.x << " " << bounding_boxes_past_.boxes.at(1).pose.position.y << std::endl;
+    	    //    	file_merge_box_2_times << time_now - time_first_box_received_ << std::endl;
+    	    //    	file_merge_box_3_poses << bounding_boxes_past_.boxes.at(2).pose.position.x << " " << bounding_boxes_past_.boxes.at(2).pose.position.y << std::endl;
+    		//    	file_merge_box_3_times << time_now - time_first_box_received_ << std::endl;
+        	//    	break;
+        	}
+    	}
+	}
 }
