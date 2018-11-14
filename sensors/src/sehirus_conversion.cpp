@@ -51,7 +51,7 @@ void SehirusConversion::udp_handle_receive_heartbeat(const boost::system::error_
 			*/
       		_heartbeatMsg.msgIdentifier = msgIdentifier;
     		char serverName[Heartbeat::SERVERNAMESIZE];
-    		for(int i=0; i<=Heartbeat::SERVERNAMESIZE; i++) {
+    		for(int i=0; i<Heartbeat::SERVERNAMESIZE; i++) {
       			serverName[i] = _heartbeatRecvBuf[Heartbeat::SERVERNAMEPOS+i]; 
     		}
 			_heartbeatMsg.serverName = std::string(serverName);
