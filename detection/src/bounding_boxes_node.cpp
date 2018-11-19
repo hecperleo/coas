@@ -1,8 +1,8 @@
 #include <detection/bounding_boxes.h>
 
-int main(int _argc, char **_argv)
+int main(int argc, char **argv)
 {
-    ros::init(_argc, _argv, "bounding_boxes_node");
+    ros::init(argc, argv, "bounding_boxes_node");
 
     BoundingBoxes boundingBoxer;
 
