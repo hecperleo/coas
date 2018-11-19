@@ -156,12 +156,12 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
 
     // Contains the point cloud of the plane
     //pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_plane(new pcl::PointCloud<pcl::PointXYZ>());
-    if (phase_ == 1 || phase_ == 2)
+    if (phase_ == DOCKING || phase_ == HARBOR)
     {
         float percentage;
-        if (phase_ == 1)
+        if (phase_ == DOCKING)
             percentage = 0.3;
-        if (phase_ == 2)
+        if (phase_ == HARBOR)
             percentage = 0.9;
 
         // While 30% [90%] of the original point cloud still there
@@ -372,7 +372,7 @@ void BoundingBoxes::constructBoundingBoxes(float x, float y, float z, float dimX
         box_.dimensions.z = dimZ;
         box_.label = label_box_;
         // If it is at docking mode search and valid posts
-        if (phase_ == 1)
+        if (phase_ == DOCKING)
         {
             checkPostDimension(dimX, dimY, dimZ);
         }
