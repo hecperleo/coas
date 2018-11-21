@@ -31,7 +31,7 @@ private:
   void pathPost23Callback(const nav_msgs::Path &path);
 
   // Node handlers
-  ros::NodeHandle nh_;
+  ros::NodeHandle nh_, pnh_;
 
   // Subscribers
   ros::Subscriber sub_path_post_1_, sub_path_post_2_, sub_path_post_3_;
@@ -41,6 +41,7 @@ private:
   ros::Publisher pub_marker_1_, pub_marker_2_, pub_marker_3_, pub_marker_4_, pub_marker_5_, pub_marker_6_;
 
   // Variables
+  std::string frame_id_;
   int counter_;
   nav_msgs::Path now_path_post_1_, now_path_post_2_, now_path_post_3_;
   nav_msgs::Path now_path_post_12_, now_path_post_13_, now_path_post_23_;

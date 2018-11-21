@@ -1,8 +1,9 @@
 #include <detection/matching.h>
 
-Matching::Matching()
+Matching::Matching(): nh_(), pnh_("~")
 {
-    nh_ = ros::NodeHandle();
+    // Params
+    pnh_.param<std::string>("frame_id", frame_id_, "/velodyne");
 
     // Subscriptions
     sub_path_post_1_ = nh_.subscribe("/path_poste_1", 1, &Matching::pathPost1Callback, this);

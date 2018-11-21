@@ -5,9 +5,10 @@
 #define HARBOR 2
 #define SEA 3
 
-BoundingBoxes::BoundingBoxes() : nh_()
+BoundingBoxes::BoundingBoxes() : nh_(), pnh_("~")
 {
     // params();
+    pnh_.param<std::string>("frame_id", frame_id_, "/velodyne");
 
     // Subscriptions
     sub_filter_points_ = nh_.subscribe("/filter_points", 1, &BoundingBoxes::cloudCallback, this);
@@ -48,8 +49,8 @@ BoundingBoxes::BoundingBoxes() : nh_()
     contTest_ = contTestPose_ = 0;
 
     // Set reference frame for the messages that are sent
-    box_.header.frame_id = boxes_.header.frame_id = "/velodyne";
-    reference_boxes_.header.frame_id = merge_boxes_.header.frame_id = "/velodyne";
+    box_.header.frame_id = boxes_.header.frame_id = frame_id_;
+    reference_boxes_.header.frame_id = merge_boxes_.header.frame_id = frame_id_;
 }
 
 BoundingBoxes::~BoundingBoxes()

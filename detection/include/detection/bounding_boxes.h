@@ -44,6 +44,7 @@ private:
 
   // Node handlers
   ros::NodeHandle nh_;
+  ros::NodeHandle pnh_;
 
   // Subscribers
   ros::Subscriber sub_filter_points_; // PointCloud subscriber
@@ -59,6 +60,7 @@ private:
   ros::Publisher pub_candidates_;
 
   // Variables
+  std::string frame_id_;
   int counter_posts_ = 0;
   int label_box_, label_merge_box_;
   std::vector<int> vec_label_polygon_;

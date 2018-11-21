@@ -7,7 +7,10 @@
     <node pkg="rosbag" type="play" name="rosbag" args=" --loop --start=40 -r 1 --duration=15 $(arg bags_path)/Na/20180425_Pruebas/2018-04-25-12-57-04.bag" required="true"/>
 
     <node pkg="filtering" type="sensor_filter_node" name="sensor_filter_node" output="screen" required="true">
+    	<param name="frame_id" value="/velodyne" type="string"/>
         <param name="use_voxel_filter" value="true" type="bool"/>
     </node>
-    <node pkg="detection" type="bounding_boxes_node" name="bounding_boxes_node" output="screen" required="true"/>
+    <node pkg="detection" type="bounding_boxes_node" name="bounding_boxes_node" output="screen" required="true">
+        <param name="frame_id" value="/velodyne" type="string"/>
+    </node>
 </launch>
