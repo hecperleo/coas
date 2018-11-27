@@ -6,12 +6,12 @@ Matching::Matching(): nh_(), pnh_("~")
     pnh_.param<std::string>("frame_id", frame_id_, "/velodyne");
 
     // Subscriptions
-    sub_path_post_1_ = nh_.subscribe("/path_poste_1", 1, &Matching::pathPost1Callback, this);
-    sub_path_post_2_ = nh_.subscribe("/path_poste_2", 1, &Matching::pathPost2Callback, this);
-    sub_path_post_3_ = nh_.subscribe("/path_poste_3", 1, &Matching::pathPost3Callback, this);
-    sub_path_post_12_ = nh_.subscribe("/path_poste_12", 1, &Matching::pathPost12Callback, this);
-    sub_path_post_13_ = nh_.subscribe("/path_poste_13", 1, &Matching::pathPost13Callback, this);
-    sub_path_post_23_ = nh_.subscribe("/path_poste_23", 1, &Matching::pathPost23Callback, this);
+    sub_path_post_1_ = nh_.subscribe("/path_post_1", 1, &Matching::pathPost1Callback, this);
+    sub_path_post_2_ = nh_.subscribe("/path_post_2", 1, &Matching::pathPost2Callback, this);
+    sub_path_post_3_ = nh_.subscribe("/path_post_3", 1, &Matching::pathPost3Callback, this);
+    sub_path_post_12_ = nh_.subscribe("/path_post_12", 1, &Matching::pathPost12Callback, this);
+    sub_path_post_13_ = nh_.subscribe("/path_post_13", 1, &Matching::pathPost13Callback, this);
+    sub_path_post_23_ = nh_.subscribe("/path_post_23", 1, &Matching::pathPost23Callback, this);
 
     // Publishers
     pub_marker_1_ = nh_.advertise<visualization_msgs::Marker>("/marker_post_1", 1);

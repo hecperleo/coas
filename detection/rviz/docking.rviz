@@ -132,7 +132,7 @@ Visualization Manager:
       Length: 0.300000012
       Line Style: Lines
       Line Width: 0.0299999993
-      Name: distPoste1
+      Name: distPost1
       Offset:
         X: 0
         Y: 0
@@ -142,7 +142,7 @@ Visualization Manager:
       Radius: 0.0299999993
       Shaft Diameter: 0.100000001
       Shaft Length: 0.100000001
-      Topic: /path_poste_1
+      Topic: /path_post_1
       Unreliable: false
       Value: false
     - Alpha: 1
@@ -155,7 +155,7 @@ Visualization Manager:
       Length: 0.300000012
       Line Style: Lines
       Line Width: 0.0299999993
-      Name: distPoste2
+      Name: distPost2
       Offset:
         X: 0
         Y: 0
@@ -165,7 +165,7 @@ Visualization Manager:
       Radius: 0.0299999993
       Shaft Diameter: 0.100000001
       Shaft Length: 0.100000001
-      Topic: /path_poste_2
+      Topic: /path_post_2
       Unreliable: false
       Value: false
     - Alpha: 1
@@ -178,7 +178,7 @@ Visualization Manager:
       Length: 0.300000012
       Line Style: Lines
       Line Width: 0.0299999993
-      Name: distPoste3
+      Name: distPost3
       Offset:
         X: 0
         Y: 0
@@ -188,7 +188,7 @@ Visualization Manager:
       Radius: 0.0299999993
       Shaft Diameter: 0.100000001
       Shaft Length: 0.100000001
-      Topic: /path_poste_3
+      Topic: /path_post_3
       Unreliable: false
       Value: false
     - Alpha: 1
@@ -201,7 +201,7 @@ Visualization Manager:
       Length: 0.300000012
       Line Style: Lines
       Line Width: 0.0299999993
-      Name: distPoste12
+      Name: distPost12
       Offset:
         X: 0
         Y: 0
@@ -211,7 +211,7 @@ Visualization Manager:
       Radius: 0.0299999993
       Shaft Diameter: 0.100000001
       Shaft Length: 0.100000001
-      Topic: /path_poste_12
+      Topic: /path_post_12
       Unreliable: false
       Value: true
     - Alpha: 1
@@ -224,7 +224,7 @@ Visualization Manager:
       Length: 0.300000012
       Line Style: Lines
       Line Width: 0.0299999993
-      Name: distPoste13
+      Name: distPost13
       Offset:
         X: 0
         Y: 0
@@ -234,7 +234,7 @@ Visualization Manager:
       Radius: 0.0299999993
       Shaft Diameter: 0.100000001
       Shaft Length: 0.100000001
-      Topic: /path_poste_13
+      Topic: /path_post_13
       Unreliable: false
       Value: true
     - Alpha: 1
@@ -247,7 +247,7 @@ Visualization Manager:
       Length: 0.300000012
       Line Style: Lines
       Line Width: 0.0299999993
-      Name: distPoste23
+      Name: distPost23
       Offset:
         X: 0
         Y: 0
@@ -257,7 +257,7 @@ Visualization Manager:
       Radius: 0.0299999993
       Shaft Diameter: 0.100000001
       Shaft Length: 0.100000001
-      Topic: /path_poste_23
+      Topic: /path_post_23
       Unreliable: false
       Value: true
     - Class: jsk_rviz_plugin/BoundingBoxArray

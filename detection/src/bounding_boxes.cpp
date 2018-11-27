@@ -19,12 +19,12 @@ BoundingBoxes::BoundingBoxes() : nh_(), pnh_("~")
     pub_boxes_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("/bounding_boxes", 1);
     pub_merge_boxes_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("/merge_bounding_boxes", 1);
     pub_reference_boxes_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("/reference_bounding_boxes", 1);
-    pub_path_post_1_ = nh_.advertise<nav_msgs::Path>("/path_poste_1", 1);
-    pub_path_post_2_ = nh_.advertise<nav_msgs::Path>("/path_poste_2", 1);
-    pub_path_post_3_ = nh_.advertise<nav_msgs::Path>("/path_poste_3", 1);
-    pub_path_post_12_ = nh_.advertise<nav_msgs::Path>("/path_poste_12", 1);
-    pub_path_post_13_ = nh_.advertise<nav_msgs::Path>("/path_poste_13", 1);
-    pub_path_post_23_ = nh_.advertise<nav_msgs::Path>("/path_poste_23", 1);
+    pub_path_post_1_ = nh_.advertise<nav_msgs::Path>("/path_post_1", 1);
+    pub_path_post_2_ = nh_.advertise<nav_msgs::Path>("/path_post_2", 1);
+    pub_path_post_3_ = nh_.advertise<nav_msgs::Path>("/path_post_3", 1);
+    pub_path_post_12_ = nh_.advertise<nav_msgs::Path>("/path_post_12", 1);
+    pub_path_post_13_ = nh_.advertise<nav_msgs::Path>("/path_post_13", 1);
+    pub_path_post_23_ = nh_.advertise<nav_msgs::Path>("/path_post_23", 1);
 
     // Candidate publisher
     pub_candidates_ = nh_.advertise<tracking::CandidateMsg>("candidates",1);
