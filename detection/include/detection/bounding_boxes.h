@@ -36,14 +36,19 @@ private:
   void mergeBoundingBoxes();
   void savePose(int nPost, nav_msgs::Path path);
   void checkPostDimension(float xDim, float yDim, float zDim);
+  void checkDistancesBetweenPosts();
   void calculateMaxDistancesCluster(const pcl::PointCloud<pcl::PointXYZ> cluster);
   float calculateDistance2Points(float x1, float y1, float z1, float x2, float y2, float z2);
+  float calculateDistance2Points(const geometry_msgs::Point &point_1, 
+                                 const geometry_msgs::Point &point_2);
   void saveDistances(bool b, nav_msgs::Path path1, nav_msgs::Path path2, nav_msgs::Path path3);
   void constructBoundingBoxes(float x, float y, float z, float dimX, float dimY, float dimZ, bool merge);
   nav_msgs::Path constructPath(std::vector<float> x, std::vector<float> y, std::vector<float> z, int length);
+  nav_msgs::Path constructPath(const geometry_msgs::Point &point_1, const geometry_msgs::Point &point_2);
 
   // Node handlers
   ros::NodeHandle nh_;
+  ros::NodeHandle pnh_;
 
   // Subscribers
   ros::Subscriber sub_filter_points_; // PointCloud subscriber
@@ -52,19 +57,21 @@ private:
   // Cluster Publishers
   ros::Publisher pub_cloud_clusters_;
   // Bounding Boxer Publishers
-  ros::Publisher pub_boxes_, pub_merge_boxes_, pub_reference_boxes_;
+  ros::Publisher pub_boxes_, pub_merge_boxes_, pub_post_candidates_boxes_;
   ros::Publisher pub_path_post_1_, pub_path_post_2_, pub_path_post_3_; 
   ros::Publisher pub_path_post_12_, pub_path_post_13_, pub_path_post_23_;
+  ros::Publisher pub_posts_positions_; /// TODO
   // Candidates Publisher
   ros::Publisher pub_candidates_;
 
   // Variables
+  std::string frame_id_;
   int counter_posts_ = 0;
   int label_box_, label_merge_box_;
   std::vector<int> vec_label_polygon_;
   std::vector<std::vector<int>> vec_vec_label_polygon_;
   jsk_recognition_msgs::BoundingBox box_;
-  jsk_recognition_msgs::BoundingBoxArray boxes_, reference_boxes_, merge_boxes_;
+  jsk_recognition_msgs::BoundingBoxArray boxes_, post_candidates_boxes_, merge_boxes_;
   float x_max_, x_min_, y_max_, y_min_, z_max_, z_min_, x_center_, y_center_, z_center_;
   float max_dist_x_, max_dist_y_, max_dist_z_, max_dist_x_polygon_, max_dist_y_polygon_, max_dist_z_polygon_;
   nav_msgs::Path path_post_1_, path_post_2_, path_post_3_, path_post_12_, path_post_13_, path_post_23_;

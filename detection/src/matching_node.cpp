@@ -1,12 +1,15 @@
 #include <detection/matching.h>
 
-int main(int _argc, char **_argv)
+int main(int argc, char **argv)
 {
-    ros::init(_argc, _argv, "matching_node");
-
+    ros::init(argc, argv, "matching_node");
     Matching match;
-
-    ros::spin();
-
+    ros::Rate rate(5); // 5Hz //TODO: fine adjustment of the working frequency
+    while(ros::ok())
+    {
+    	ros::spinOnce();
+    	match.toDo();
+    	rate.sleep();
+    }
     return 0;
 }

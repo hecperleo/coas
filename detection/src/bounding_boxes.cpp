@@ -1,13 +1,15 @@
 #include <detection/bounding_boxes.h>
+#include <detection/PostsPositions.h>
 #include <tracking/CandidateMsg.h>
 
 #define DOCKING 1
 #define HARBOR 2
 #define SEA 3
 
-BoundingBoxes::BoundingBoxes() : nh_()
+BoundingBoxes::BoundingBoxes() : nh_(), pnh_("~")
 {
     // params();
+    pnh_.param<std::string>("frame_id", frame_id_, "/velodyne");
 
     // Subscriptions
     sub_filter_points_ = nh_.subscribe("/filter_points", 1, &BoundingBoxes::cloudCallback, this);
@@ -17,13 +19,15 @@ BoundingBoxes::BoundingBoxes() : nh_()
     pub_cloud_clusters_ = nh_.advertise<sensor_msgs::PointCloud2>("/visualization_clusters", 1);
     pub_boxes_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("/bounding_boxes", 1);
     pub_merge_boxes_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("/merge_bounding_boxes", 1);
-    pub_reference_boxes_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("/reference_bounding_boxes", 1);
-    pub_path_post_1_ = nh_.advertise<nav_msgs::Path>("/path_poste_1", 1);
-    pub_path_post_2_ = nh_.advertise<nav_msgs::Path>("/path_poste_2", 1);
-    pub_path_post_3_ = nh_.advertise<nav_msgs::Path>("/path_poste_3", 1);
-    pub_path_post_12_ = nh_.advertise<nav_msgs::Path>("/path_poste_12", 1);
-    pub_path_post_13_ = nh_.advertise<nav_msgs::Path>("/path_poste_13", 1);
-    pub_path_post_23_ = nh_.advertise<nav_msgs::Path>("/path_poste_23", 1);
+    pub_post_candidates_boxes_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("/reference_bounding_boxes", 1);
+    pub_path_post_1_ = nh_.advertise<nav_msgs::Path>("/path_post_1", 1);
+    pub_path_post_2_ = nh_.advertise<nav_msgs::Path>("/path_post_2", 1);
+    pub_path_post_3_ = nh_.advertise<nav_msgs::Path>("/path_post_3", 1);
+    pub_path_post_12_ = nh_.advertise<nav_msgs::Path>("/path_post_12", 1);
+    pub_path_post_13_ = nh_.advertise<nav_msgs::Path>("/path_post_13", 1);
+    pub_path_post_23_ = nh_.advertise<nav_msgs::Path>("/path_post_23", 1);
+
+    pub_posts_positions_ = nh_.advertise<detection::PostsPositions>("posts_positions", 1); //// TODO
 
     // Candidate publisher
     pub_candidates_ = nh_.advertise<tracking::CandidateMsg>("candidates",1);
@@ -48,8 +52,8 @@ BoundingBoxes::BoundingBoxes() : nh_()
     contTest_ = contTestPose_ = 0;
 
     // Set reference frame for the messages that are sent
-    box_.header.frame_id = boxes_.header.frame_id = "/velodyne";
-    reference_boxes_.header.frame_id = merge_boxes_.header.frame_id = "/velodyne";
+    box_.header.frame_id = boxes_.header.frame_id = frame_id_;
+    post_candidates_boxes_.header.frame_id = merge_boxes_.header.frame_id = frame_id_;
 }
 
 BoundingBoxes::~BoundingBoxes()
@@ -80,13 +84,13 @@ void BoundingBoxes::phaseCallback(const std_msgs::Int8 phaseMode)
         max_cluster_size_ = 600;
         // Bounding Boxes parameters
         close_distance_ = 1.0;
-        xy_min_post_ = 0.1;
-        xy_max_post_ = 0.6;
+        xy_min_post_ = 0.1; /// TODO
+        xy_max_post_ = 0.6; /// TODO
         z_min_post_ = 1;
         z_max_post_ = 3.0;
         min_distance_post_12_ = 3.5;
         max_distance_post_12_ = 3.9;
-        min_distance_post_13_ = 8.5;
+        min_distance_post_13_ = 8.4; /// Previous value: 8.5. Changed because a distance of 8.47 is detected
         max_distance_post_13_ = 8.8;
         break;
     // Harbor
@@ -152,16 +156,18 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
     // How close must be a point from the model to consider it in line
     seg.setDistanceThreshold(distance_threshold_); // (default 0.02)
 
+    /// TODO: check if the number of points is greater than a threshold
+    /// if not, skip all the processing of the received pointcloud
     int nr_points = (int)downsampled_XYZ->points.size();
 
     // Contains the point cloud of the plane
     //pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_plane(new pcl::PointCloud<pcl::PointXYZ>());
-    if (phase_ == 1 || phase_ == 2)
+    if (phase_ == DOCKING || phase_ == HARBOR)
     {
         float percentage;
-        if (phase_ == 1)
+        if (phase_ == DOCKING)
             percentage = 0.3;
-        if (phase_ == 2)
+        if (phase_ == HARBOR)
             percentage = 0.9;
 
         // While 30% [90%] of the original point cloud still there
@@ -219,7 +225,8 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
 
             // Then add points to a point cloud for visualization
             pcl::PointXYZL point;
-            // For differentiate each cluster, we add a different intensity value
+            // To know which cluster a point belongs to, we add a label to each point, which identifies the cluster
+            // to which it's related
             point.label = j;
             point.x = downsampled_XYZ->points[*pit].x;
             point.y = downsampled_XYZ->points[*pit].y;
@@ -261,13 +268,54 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
             // Construct bounding box
             constructBoundingBoxes(x_center_, y_center_, z_center_,
                                    max_dist_x_, max_dist_y_, max_dist_z_, false);
+            // Check if box is a post when in docking phase
+            if (phase_ == DOCKING)
+                checkPostDimension(max_dist_x_, max_dist_y_, max_dist_z_);
         }
         // Publish all boxes at one time
         pub_boxes_.publish(boxes_);
+        if(phase_ == DOCKING)
+        {
+            // Check distances between posts
+            checkDistancesBetweenPosts();
+            pub_post_candidates_boxes_.publish(post_candidates_boxes_);     
+        }
+
         // Calculate all possible polygons formed by clusters
         calculateVectorPolygons();
         // Merge all bounding boxes that form one polygon into a new bounding box
         mergeBoundingBoxes();
+
+        // OBSTACLE ESTIMATOR
+        // TODO: Adjust this covariance
+        tracking::CandidateMsg candidate_msg;
+        candidate_msg.header.stamp = ros::Time::now();
+        std::vector<double> aux_covariance({0.3, 0.1, 0.1, 0.3});
+        candidate_msg.location_covariance = aux_covariance;
+        candidate_msg.speed_covariance = aux_covariance;
+        candidate_msg.speed.x = 0.0;
+        candidate_msg.speed.y = 0.0;
+        candidate_msg.speed.z = 0.0;
+        // If the docking phase is active, send reference boxes as candidates
+        if(phase_ == DOCKING)
+        {
+            for(auto it = post_candidates_boxes_.boxes.begin(); it != post_candidates_boxes_.boxes.end(); ++it)
+            {
+                candidate_msg.size = tracking::CandidateMsg::SIZE_UNKNOWN;
+                candidate_msg.location = it->pose.position;
+                pub_candidates_.publish(candidate_msg);
+            }
+        }
+        // If another phase is active, send merge_boxes_ as candidates
+        else
+        {
+            for(auto it = merge_boxes_.boxes.begin(); it != merge_boxes_.boxes.end(); ++it)
+            {   
+                candidate_msg.size = tracking::CandidateMsg::SIZE_UNKNOWN;
+                candidate_msg.location = it->pose.position;
+                pub_candidates_.publish(candidate_msg);
+            }
+        }
     }
     std::cout << "[ BBXS] Time: " << ros::Time::now().toSec() - time_start << std::endl;
     std::cout << " - - - - - - - - - - - - - - - - -" << std::endl;
@@ -280,7 +328,7 @@ void BoundingBoxes::cleanVariables()
     vec_vec_label_polygon_.clear();
     vec_label_polygon_.clear();
     boxes_.boxes.clear();
-    reference_boxes_.boxes.clear();
+    post_candidates_boxes_.boxes.clear();
     merge_boxes_.boxes.clear();
     vec_vec_label_polygon_.clear();
     path_post_1_.poses.clear();
@@ -371,11 +419,6 @@ void BoundingBoxes::constructBoundingBoxes(float x, float y, float z, float dimX
         box_.dimensions.y = dimY;
         box_.dimensions.z = dimZ;
         box_.label = label_box_;
-        // If it is at docking mode search and valid posts
-        if (phase_ == 1)
-        {
-            checkPostDimension(dimX, dimY, dimZ);
-        }
         boxes_.boxes.push_back(box_);
         label_box_++;
     }
@@ -392,110 +435,153 @@ void BoundingBoxes::constructBoundingBoxes(float x, float y, float z, float dimX
 
 void BoundingBoxes::checkPostDimension(float xDim, float yDim, float zDim)
 {
-    // Check if the actual bounding box is a post
+    // Check if the current bounding box is a post
     if ((xy_min_post_ < xDim) && (xDim < xy_max_post_) &&
         (xy_min_post_ < yDim) && (yDim < xy_max_post_) &&
         (z_min_post_ < zDim) && (zDim < z_max_post_))
     {
-        // Distance to the post
-        float dist = calculateDistance2Points(0, 0, 0, box_.pose.position.x, box_.pose.position.y, box_.pose.position.z);
-        // Prepare the path
-        std::vector<float> x1, y1, z1;
-        x1.push_back(0.0);
-        y1.push_back(0.0);
-        z1.push_back(0.0);
-        x1.push_back(box_.pose.position.x);
-        y1.push_back(box_.pose.position.y);
-        z1.push_back(box_.pose.position.z);
-        // Construct the path and put the bounding box in the reference array
-        switch (counter_posts_)
-        {
-        case 0:
-            path_post_1_ = constructPath(x1, y1, z1, 2);
-            reference_boxes_.boxes.push_back(box_);
-            break;
-        case 1:
-            path_post_2_ = constructPath(x1, y1, z1, 2);
-            reference_boxes_.boxes.push_back(box_);
-            break;
-        case 2:
-            path_post_3_ = constructPath(x1, y1, z1, 2);
-            reference_boxes_.boxes.push_back(box_);
-            break;
-        }
-        // If there is more than one post detected
-        if (reference_boxes_.boxes.size() > 1)
-        {
-            int counter_between_posts = 0;
-            // Calculate the distance between all posts
-            for (int i = 0; i < reference_boxes_.boxes.size(); ++i)
-            {
-                for (int j = i + 1; j < reference_boxes_.boxes.size(); j++)
-                {
-                    jsk_recognition_msgs::BoundingBox aux_box_1 = reference_boxes_.boxes.at(i);
-                    jsk_recognition_msgs::BoundingBox aux_box_2 = reference_boxes_.boxes.at(j);
-                    float dist = calculateDistance2Points(aux_box_1.pose.position.x, aux_box_1.pose.position.y, aux_box_1.pose.position.z,
-                                                          aux_box_2.pose.position.x, aux_box_2.pose.position.y, aux_box_2.pose.position.z);
-                    // Prepare the path
-                    std::vector<float> x0, y0, z0;
-                    x0.push_back(reference_boxes_.boxes.at(i).pose.position.x);
-                    y0.push_back(reference_boxes_.boxes.at(i).pose.position.y);
-                    z0.push_back(reference_boxes_.boxes.at(i).pose.position.z);
-                    x0.push_back(reference_boxes_.boxes.at(j).pose.position.x);
-                    y0.push_back(reference_boxes_.boxes.at(j).pose.position.y);
-                    z0.push_back(reference_boxes_.boxes.at(j).pose.position.z);
-                    // If the calculated distances match with the searched distances
-                    if (((min_distance_post_12_ < dist) && (dist < max_distance_post_12_)) ||
-                        ((min_distance_post_13_ < dist) && (dist < max_distance_post_13_)))
-                    {
-                        // Construct the path to represent distances between posts
-                        switch (counter_between_posts)
-                        {
-                        case 0:
-                            path_post_12_ = constructPath(x0, y0, z0, 2);
-                            break;
-                        case 1:
-                            path_post_13_ = constructPath(x0, y0, z0, 2);
-                            break;
-                        case 2:
-                            path_post_23_ = constructPath(x0, y0, z0, 2);
-                            break;
-                        }
-                        counter_between_posts++;
-                    }
-                }
-            }
-        }
-        counter_posts_++;
-        // Publishers
-        pub_reference_boxes_.publish(reference_boxes_);
-        pub_path_post_1_.publish(path_post_1_);
-        pub_path_post_2_.publish(path_post_2_);
-        pub_path_post_3_.publish(path_post_3_);
-        pub_path_post_12_.publish(path_post_12_);
-        pub_path_post_13_.publish(path_post_13_);
-        pub_path_post_23_.publish(path_post_23_);
+        post_candidates_boxes_.boxes.push_back(box_);
+    }
+}
 
-        // OBSTACLE ESTIMATOR
-        // If the docking phase is active, send reference boxes as candidates
-        if(phase_ == DOCKING)
+void BoundingBoxes::checkDistancesBetweenPosts()
+{
+    // If there is more than one post detected
+    if (post_candidates_boxes_.boxes.size() > 1)
+    {
+        std::cout << "CHECK DISTANCE BETWEEN POSTS" << std::endl;
+        std::vector<int> vec_post_candidates_boxes_indices(3,-1);
+        bool flag_distance_post_12_detected;
+        bool flag_distance_post_13_detected;
+        bool flag_stop = false;
+        ///////// TODO CHECK THIS LOOP
+        // Calculate the distance between all posts
+        std::cout << "Number of possible posts: " << post_candidates_boxes_.boxes.size() << std::endl;
+        for (int i = 0; (i < post_candidates_boxes_.boxes.size()) && !flag_stop; ++i)
         {
-            for(auto it = reference_boxes_.boxes.begin(); it != reference_boxes_.boxes.end(); ++it)
+            for(int j=i+1; (j < post_candidates_boxes_.boxes.size()) && !flag_stop; ++j)
             {
-                tracking::CandidateMsg candidate_msg;
-                candidate_msg.header.stamp = ros::Time::now();
-                candidate_msg.size = tracking::CandidateMsg::SIZE_UNKNOWN;
-                candidate_msg.location = it->pose.position;
-                candidate_msg.speed.x = 0.0;
-                candidate_msg.speed.y = 0.0;
-                candidate_msg.speed.z = 0.0;
-                //TODO: Adjust this covariance
-                std::vector<double> aux_covariance({0.3, 0.1, 0.1, 0.3});
-                candidate_msg.location_covariance = aux_covariance;
-                candidate_msg.speed_covariance = aux_covariance;
-                pub_candidates_.publish(candidate_msg);
-            }
+                flag_distance_post_12_detected = false;
+                flag_distance_post_13_detected = false;
+                float distance = calculateDistance2Points(post_candidates_boxes_.boxes.at(i).pose.position,
+                                                          post_candidates_boxes_.boxes.at(j).pose.position);
+                std::cout << "Distance between candidates i: " << i << " and j: " << j << " = " << distance << std::endl;
+                if( (min_distance_post_12_ < distance) && (distance < max_distance_post_12_) )
+                {
+                    std::cout << "Distance match the target distance between post 1 and 2" << std::endl;
+                    flag_distance_post_12_detected = true;
+                }
+                else if ( (min_distance_post_13_ < distance) && (distance < max_distance_post_13_) )
+                {
+                    std::cout << "Distance match the target distance between post 1 and 3" << std::endl;
+                    flag_distance_post_13_detected = true;
+                }
+
+                // Distance between post i and j match one of the expected distances
+                if( flag_distance_post_12_detected || flag_distance_post_13_detected )
+                {
+                    counter_posts_ = 2;
+                    vec_post_candidates_boxes_indices.at(0) = i;
+                    vec_post_candidates_boxes_indices.at(1) = j;
+                    // Keep looking for another candidate post to complete the triangle
+                    for(int k=j+1; (k < post_candidates_boxes_.boxes.size()) && !flag_stop; ++k)
+                    {
+                        float distance1 = calculateDistance2Points(post_candidates_boxes_.boxes.at(i).pose.position,
+                                                                   post_candidates_boxes_.boxes.at(k).pose.position);
+                        float distance2 = calculateDistance2Points(post_candidates_boxes_.boxes.at(j).pose.position,
+                                                                   post_candidates_boxes_.boxes.at(k).pose.position);
+                        std::cout << "Distance between candidates i: " << i << " and k: " << k << " = " << distance1 << std::endl;
+                        std::cout << "Distance between candidates j: " << j << " and k: " << k << " = " << distance2 << std::endl;
+                        // If distance between post i and j is the short side of the triangle
+                        // The distances from k to i and j must be equal to the long side of the triangle
+                        if( flag_distance_post_12_detected &&
+                            (min_distance_post_13_ < distance1) && (distance1 < max_distance_post_13_) &&
+                            (min_distance_post_13_ < distance2) && (distance2 < max_distance_post_13_) 
+                        ){
+                            counter_posts_ = 3;
+                            vec_post_candidates_boxes_indices.at(2) = k;
+                            flag_stop = true;
+                            std::cout << "Triangle complete" << std::endl;
+
+                        }
+                        // If distance between post i and j is the long side of the triangle
+                        // one of the other distance must also be the long side of the triangle
+                        // and the other one the short side
+                        else if( flag_distance_post_13_detected &&
+                                 (((min_distance_post_13_ < distance1) && (distance1 < max_distance_post_13_) &&
+                                  (min_distance_post_12_ < distance2) && (distance2 < max_distance_post_12_)) ||
+                                  ((min_distance_post_12_ < distance1) && (distance1 < max_distance_post_12_) &&
+                                  (min_distance_post_13_ < distance2) && (distance2 < max_distance_post_13_))) 
+                        ){
+                            counter_posts_ = 3;
+                            vec_post_candidates_boxes_indices.at(2) = k;
+                            flag_stop = true;
+                            std::cout << "Triangle complete" << std::endl;
+
+                        }
+                    } // end for k
+                } 
+            } // end for j
+        } // end for i
+         
+        geometry_msgs::Point point_origin;
+        point_origin.x = point_origin.y = point_origin.z = 0;
+        // Publish posts
+        std::cout << "Publishing posts info" << std::endl;
+        float distance12;
+        float distance13;
+        float distance23;
+        switch(counter_posts_)
+        {
+            case 2:
+                path_post_1_ = constructPath(point_origin,
+                    post_candidates_boxes_.boxes.at(vec_post_candidates_boxes_indices.at(0)).pose.position);
+                path_post_2_ = constructPath(point_origin,
+                    post_candidates_boxes_.boxes.at(vec_post_candidates_boxes_indices.at(1)).pose.position);
+                distance12 = calculateDistance2Points(path_post_1_.poses.at(1).pose.position, path_post_2_.poses.at(1).pose.position);
+                std::cout << "Distance path between 1 and 2 : " << distance12 << std::endl;
+                path_post_12_ = constructPath(path_post_1_.poses.at(1).pose.position, path_post_2_.poses.at(1).pose.position);
+                pub_path_post_1_.publish(path_post_1_);
+                pub_path_post_2_.publish(path_post_2_);
+                pub_path_post_12_.publish(path_post_12_);
+                break;
+            case 3:
+                path_post_1_ = constructPath(point_origin,
+                    post_candidates_boxes_.boxes.at(vec_post_candidates_boxes_indices.at(0)).pose.position);
+                path_post_2_ = constructPath(point_origin,
+                    post_candidates_boxes_.boxes.at(vec_post_candidates_boxes_indices.at(1)).pose.position);
+                path_post_3_ = constructPath(point_origin,
+                    post_candidates_boxes_.boxes.at(vec_post_candidates_boxes_indices.at(2)).pose.position);
+                distance12 = calculateDistance2Points(path_post_1_.poses.at(1).pose.position, path_post_2_.poses.at(1).pose.position);
+                distance13 = calculateDistance2Points(path_post_1_.poses.at(1).pose.position, path_post_3_.poses.at(1).pose.position);
+                distance23 = calculateDistance2Points(path_post_2_.poses.at(1).pose.position, path_post_3_.poses.at(1).pose.position);
+                std::cout << "Distance path between 1 and 2 : " << distance12 << std::endl;
+                std::cout << "Distance path between 1 and 3 : " << distance13 << std::endl;
+                std::cout << "Distance path between 2 and 3 : " << distance23 << std::endl;
+                path_post_12_ = constructPath(path_post_1_.poses.at(1).pose.position, path_post_2_.poses.at(1).pose.position);
+                path_post_13_ = constructPath(path_post_1_.poses.at(1).pose.position, path_post_3_.poses.at(1).pose.position);
+                path_post_23_ = constructPath(path_post_2_.poses.at(1).pose.position, path_post_3_.poses.at(1).pose.position);
+                pub_path_post_1_.publish(path_post_1_);
+                pub_path_post_2_.publish(path_post_2_);
+                pub_path_post_3_.publish(path_post_3_);
+                pub_path_post_12_.publish(path_post_12_);
+                pub_path_post_13_.publish(path_post_13_);
+                pub_path_post_23_.publish(path_post_23_);
+                break;
         }
+        /// Send post positions in a single message
+        /// This avoid mixing information from separate instants in time
+        detection::PostsPositions posts_positions;
+        posts_positions.header.stamp = ros::Time::now();
+        if(!path_post_1_.poses.empty())
+            posts_positions.positions.push_back(path_post_1_.poses.at(1).pose.position);
+        if(!path_post_2_.poses.empty())
+            posts_positions.positions.push_back(path_post_2_.poses.at(1).pose.position);
+        if(!path_post_3_.poses.empty())
+            posts_positions.positions.push_back(path_post_3_.poses.at(1).pose.position);
+        pub_posts_positions_.publish(posts_positions);
+        //////////////////////////////////////////////////
+
         // Save logs
         saveDistances(true, path_post_1_, path_post_2_, path_post_3_);
         saveDistances(false, path_post_12_, path_post_13_, path_post_23_);
@@ -516,14 +602,14 @@ void BoundingBoxes::checkPostDimension(float xDim, float yDim, float zDim)
         {
             savePose(3, path_post_3_);
         }
-    }
+    }       
 }
 
 nav_msgs::Path BoundingBoxes::constructPath(std::vector<float> x, std::vector<float> y, std::vector<float> z, int length)
 {
     nav_msgs::Path path;
     std::vector<geometry_msgs::PoseStamped> poses(length);
-    path.header.frame_id = "velodyne";
+    path.header.frame_id = "/velodyne";
     for (int i = 0; i < length; ++i)
     {
         poses.at(i).pose.position.x = x[i];
@@ -534,10 +620,21 @@ nav_msgs::Path BoundingBoxes::constructPath(std::vector<float> x, std::vector<fl
     return path;
 }
 
+nav_msgs::Path BoundingBoxes::constructPath(const geometry_msgs::Point &point_1, const geometry_msgs::Point &point_2)
+{
+    nav_msgs::Path path;
+    path.header.frame_id = "/velodyne";
+    std::vector<geometry_msgs::PoseStamped> poses(2);
+    poses.at(0).pose.position = point_1;
+    poses.at(1).pose.position = point_2;
+    path.poses = poses;
+    return path;
+}
+
 void BoundingBoxes::calculateVectorPolygons()
 {
     float dist;
-    bool repeat, found;
+    bool repeated, found;
     // Compare all distances between boxes
     for (int i = 0; i < boxes_.boxes.size(); ++i)
     {
@@ -549,23 +646,25 @@ void BoundingBoxes::calculateVectorPolygons()
             dist = calculateDistance2Points(aux_box_1.pose.position.x, aux_box_1.pose.position.y, aux_box_1.pose.position.z,
                                             aux_box_2.pose.position.x, aux_box_2.pose.position.y, aux_box_2.pose.position.z);
 
+            /// TODO: change the method, to avoid this search of duplicates.
+            /// Maybe with a vector of boxes indices whose elements take -1 as value when that box is assigned to a polygon
             // If the label is in another polygon do not use it in a new polygon
-            repeat = false;
+            repeated = false;
             for (int k = 0; k < vec_vec_label_polygon_.size(); k++)
             {
                 // Check the label of the iterator i
                 if (std::find(vec_vec_label_polygon_[k].begin(), vec_vec_label_polygon_[k].end(), boxes_.boxes[i].label) != vec_vec_label_polygon_[k].end())
                 {
-                    repeat = true;
+                    repeated = true;
                 }
                 // Check the label of the iterator j
                 if (std::find(vec_vec_label_polygon_[k].begin(), vec_vec_label_polygon_[k].end(), boxes_.boxes[j].label) != vec_vec_label_polygon_[k].end())
                 {
-                    repeat = true;
+                    repeated = true;
                 }
             }
             // If they are close
-            if (0.01 < dist && dist < close_distance_ && repeat == false)
+            if (0.01 < dist && dist < close_distance_ && repeated == false)
             {
                 // If the polygon is empty put in i instead of j
                 if (vec_label_polygon_.empty())
@@ -591,7 +690,7 @@ void BoundingBoxes::calculateVectorPolygons()
         // If no label[j] has been found near label[i].
         if (found == false)
         {
-            // If the polygon is not empty storage it in the polygons vector
+            // If the polygon is not empty store it in the polygons vector
             if (!vec_label_polygon_.empty())
             {
                 vec_vec_label_polygon_.push_back(vec_label_polygon_);
@@ -605,11 +704,11 @@ void BoundingBoxes::calculateVectorPolygons()
                     if (std::find(vec_vec_label_polygon_[k].begin(), vec_vec_label_polygon_[k].end(),
                                   boxes_.boxes[i].label) != vec_vec_label_polygon_[k].end())
                     {
-                        repeat = true;
+                        repeated = true;
                     }
                 }
-                // If not, storage it like a polygon formed by one label
-                if (repeat == false)
+                // If not, store it like a polygon formed by one label
+                if (repeated == false)
                 {
                     vec_label_polygon_.push_back(boxes_.boxes[i].label);
                     vec_vec_label_polygon_.push_back(vec_label_polygon_);
@@ -626,6 +725,15 @@ float BoundingBoxes::calculateDistance2Points(float x1, float y1, float z1, floa
     distance = sqrt(((x2 - x1) * (x2 - x1)) + ((y2 - y1) * (y2 - y1)) + ((z2 - z1) * (z2 - z1)));
     return distance;
 }
+
+float BoundingBoxes::calculateDistance2Points(const geometry_msgs::Point &point_1, 
+                                              const geometry_msgs::Point &point_2)
+{
+    return sqrt( ((point_2.x - point_1.x) * (point_2.x - point_1.x)) + 
+                 ((point_2.y - point_1.y) * (point_2.y - point_1.y)) + 
+                 ((point_2.z - point_1.z) * (point_2.z - point_1.z)) );
+}
+
 
 void BoundingBoxes::mergeBoundingBoxes()
 {
@@ -676,28 +784,6 @@ void BoundingBoxes::mergeBoundingBoxes()
                                max_dist_x_polygon_, max_dist_y_polygon_, max_dist_z_polygon_, true);
     }
     pub_merge_boxes_.publish(merge_boxes_);
-
-    // OBSTACLE ESTIMATOR
-    // If the phase is HARBOR or SEA send merge_boxes_ as candidates
-    if(phase_ != DOCKING)
-    {
-        //TODO: Combine this code with the function constructBoundingBoxes
-        for(auto it = merge_boxes_.boxes.begin(); it != merge_boxes_.boxes.end(); ++it)
-        {
-            tracking::CandidateMsg candidate_msg;
-            candidate_msg.header.stamp = ros::Time::now();
-            candidate_msg.size = tracking::CandidateMsg::SIZE_UNKNOWN;
-            candidate_msg.location = it->pose.position;
-            candidate_msg.speed.x = 0.0;
-            candidate_msg.speed.y = 0.0;
-            candidate_msg.speed.z = 0.0;
-            //TODO: Adjust this covariance
-            std::vector<double> aux_covariance({0.3, 0.1, 0.1, 0.3});
-            candidate_msg.location_covariance = aux_covariance;
-            candidate_msg.speed_covariance = aux_covariance;
-            pub_candidates_.publish(candidate_msg);
-        } 
-    }
 }
 
 void BoundingBoxes::getParameters()
