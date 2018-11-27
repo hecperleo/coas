@@ -161,7 +161,6 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
     int nr_points = (int)downsampled_XYZ->points.size();
 
     // Contains the point cloud of the plane
-    //pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_plane(new pcl::PointCloud<pcl::PointXYZ>());
     if (phase_ == DOCKING || phase_ == HARBOR)
     {
         float percentage;
@@ -170,8 +169,9 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
         if (phase_ == HARBOR)
             percentage = 0.9;
 
+        int loop_counter = 0;
         // While 30% [90%] of the original point cloud still there
-        while (downsampled_XYZ->points.size() > percentage * nr_points) // docking = 0.9 // default = 0.3
+        while( (downsampled_XYZ->points.size() > percentage * nr_points) && (loop_counter < 30) )
         {
             // Segment the largest planar component from the remaining cloud
             seg.setInputCloud(downsampled_XYZ);
@@ -182,17 +182,14 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
                 std::cerr << "Could not estimate a planar model for the given dataset." << std::endl;
                 break;
             }
-            // Extract the planar inliers from the input cloud
             pcl::ExtractIndices<pcl::PointXYZ> extract;
             extract.setInputCloud(downsampled_XYZ);
             extract.setIndices(inliers);
-            //extract.setNegative(false);
-            // Get the points associated with the planar surface
-            //extract.filter(*cloud_plane); // Maybe this step could be skipped
-            // Remove the planar inliers, extract the rest
+            // Ignore the planar inliers, extract the rest
             extract.setNegative(true);
             extract.filter(*cloud_f);
             downsampled_XYZ.swap(cloud_f);
+            loop_counter++;
         }
     }
     std::vector<pcl::PointIndices> cluster_indices;
