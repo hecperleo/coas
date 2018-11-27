@@ -11,20 +11,20 @@ BoundingBoxes::BoundingBoxes() : nh_(), pnh_("~")
     pnh_.param<std::string>("frame_id", frame_id_, "/velodyne");
 
     // Subscriptions
-    sub_filter_points_ = nh_.subscribe("/filter_points", 1, &BoundingBoxes::cloudCallback, this);
-    sub_phase_ = nh_.subscribe("/phase", 1, &BoundingBoxes::phaseCallback, this);
+    sub_filter_points_ = nh_.subscribe("filter_points", 1, &BoundingBoxes::cloudCallback, this);
+    sub_phase_ = nh_.subscribe("phase", 1, &BoundingBoxes::phaseCallback, this);
 
     // Publishers
-    pub_cloud_clusters_ = nh_.advertise<sensor_msgs::PointCloud2>("/visualization_clusters", 1);
-    pub_boxes_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("/bounding_boxes", 1);
-    pub_merge_boxes_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("/merge_bounding_boxes", 1);
-    pub_reference_boxes_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("/reference_bounding_boxes", 1);
-    pub_path_post_1_ = nh_.advertise<nav_msgs::Path>("/path_post_1", 1);
-    pub_path_post_2_ = nh_.advertise<nav_msgs::Path>("/path_post_2", 1);
-    pub_path_post_3_ = nh_.advertise<nav_msgs::Path>("/path_post_3", 1);
-    pub_path_post_12_ = nh_.advertise<nav_msgs::Path>("/path_post_12", 1);
-    pub_path_post_13_ = nh_.advertise<nav_msgs::Path>("/path_post_13", 1);
-    pub_path_post_23_ = nh_.advertise<nav_msgs::Path>("/path_post_23", 1);
+    pub_cloud_clusters_ = nh_.advertise<sensor_msgs::PointCloud2>("visualization_clusters", 1);
+    pub_boxes_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("bounding_boxes", 1);
+    pub_merge_boxes_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("merge_bounding_boxes", 1);
+    pub_reference_boxes_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("reference_bounding_boxes", 1);
+    pub_path_post_1_ = nh_.advertise<nav_msgs::Path>("path_post_1", 1);
+    pub_path_post_2_ = nh_.advertise<nav_msgs::Path>("path_post_2", 1);
+    pub_path_post_3_ = nh_.advertise<nav_msgs::Path>("path_post_3", 1);
+    pub_path_post_12_ = nh_.advertise<nav_msgs::Path>("path_post_12", 1);
+    pub_path_post_13_ = nh_.advertise<nav_msgs::Path>("path_post_13", 1);
+    pub_path_post_23_ = nh_.advertise<nav_msgs::Path>("path_post_23", 1);
 
     // Candidate publisher
     pub_candidates_ = nh_.advertise<tracking::CandidateMsg>("candidates",1);

@@ -9,12 +9,12 @@ use_voxel_filter(true)
     private_nh.getParam("use_voxel_filter", use_voxel_filter);
     // // Subscriptions
     // matrix_sub = n.subscribe("/v_map", 1, &SensorFilter::matrix_cb, this);
-    sub_phase = n.subscribe("/phase", 1, &SensorFilter::phaseCallback, this);
-    sub_sensor = n.subscribe("/velodyne_points", 1, &SensorFilter::sensorCallback, this);
+    sub_phase = n.subscribe("phase", 1, &SensorFilter::phaseCallback, this);
+    sub_sensor = n.subscribe("velodyne_points", 1, &SensorFilter::sensorCallback, this);
 
     // // Publishers
-    pub_filtered_cloud_3D = n.advertise<sensor_msgs::PointCloud2>("/filter_points", 1);
-    pub_matrix = n.advertise<filtering::VectorVector>("/v_map", 1);
+    pub_filtered_cloud_3D = n.advertise<sensor_msgs::PointCloud2>("filter_points", 1);
+    pub_matrix = n.advertise<filtering::VectorVector>("v_map", 1);
 
     range_dock = 10;
     range_sea = 100;

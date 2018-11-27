@@ -1,16 +1,37 @@
 <launch>
-    <arg name="bags_path" doc="path to bag files" default="$(env HOME)/bags" />
     <!-- Docking: 1 | Harbor: 2 | Sea: 3 -->
     <node pkg="rostopic" type="rostopic" name="phase" args="pub /phase std_msgs/Int8 3"/>
 
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(find detection)/rviz/sea.rviz" required="true"/>
-    <node pkg="rosbag" type="play" name="rosbag" args=" --loop --start=40 -r 1 --duration=15 $(arg bags_path)/Na/20180425_Pruebas/2018-04-25-12-57-04.bag" required="true"/>
 
     <node pkg="filtering" type="sensor_filter_node" name="sensor_filter_node" output="screen" required="true">
-    	<param name="frame_id" value="/velodyne" type="string"/>
+        <!-- Params -->
+        <param name="frame_id" value="/velodyne" type="string"/>
         <param name="use_voxel_filter" value="true" type="bool"/>
+        <!-- Subscribers -->
+        <remap from="phase" to="/phase"/>
+        <remap from="velodyne_points" to="/velodyne_points"/>
+        <!-- Publishers -->
+        <remap from="filter_points" to="/filter_points"/>
+        <remap from="v_map" to="/v_map"/>
     </node>
     <node pkg="detection" type="bounding_boxes_node" name="bounding_boxes_node" output="screen" required="true">
+        <!-- Params -->
         <param name="frame_id" value="/velodyne" type="string"/>
+        <!-- Subscribers -->
+        <remap from="filter_points" to="/filter_points"/>
+        <remap from="phase" to="/phase"/>
+        <!-- Publishers -->
+        <remap from="visualization_clusters" to="/visualization_clusters"/>
+        <remap from="bounding_boxes" to="/bounding_boxes"/>
+        <remap from="merge_bounding_boxes" to="/merge_bounding_boxes"/>
+        <remap from="reference_bounding_boxes" to="reference_bounding_boxes"/>
+        <remap from="path_post_1" to="/path_post_1"/>
+        <remap from="path_post_2" to="/path_post_2"/>
+        <remap from="path_post_3" to="/path_post_3"/>
+        <remap from="path_post_12" to="/path_post_12"/>
+        <remap from="path_post_13" to="/path_post_13"/>
+        <remap from="path_post_23" to="/path_post_23"/>
+    </node>
     </node>
 </launch>
