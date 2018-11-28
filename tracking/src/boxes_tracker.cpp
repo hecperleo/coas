@@ -21,8 +21,8 @@ nh_()
   	file_merge_box_2_times_abs.open(log_output + "Test_Pos_Merge_BBXS_Sea/mergeBox2timeAbs");
   	// file_merge_box_3_times_abs.open(log_output + "Test_Pos_Merge_BBXS_Sea/mergeBox3timeAbs");
 
-	sub_bounding_box_array = nh_.subscribe("/merge_bounding_boxes", 1, &BoxesTracker::boundingBoxesCallback, this);
-	pub_bounding_box_array = nh_.advertise<BoundingBoxArray>("/tracked_bounding_boxes", 1);
+	sub_bounding_box_array = nh_.subscribe("merge_bounding_boxes", 1, &BoxesTracker::boundingBoxesCallback, this);
+	pub_bounding_box_array = nh_.advertise<BoundingBoxArray>("tracked_bounding_boxes", 1);
 	bounding_boxes_past_.header.frame_id = "velodyne";
 
 	flag_tracking_started_ = false;

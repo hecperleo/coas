@@ -11,16 +11,16 @@ Matching::Matching(): nh_(), pnh_("~")
     sub_posts_positions_ = nh_.subscribe("posts_positions", 1, &Matching::postsPositionsCallback, this); ///// TODO
 
     // Publishers
-    pub_marker_1_ = nh_.advertise<visualization_msgs::Marker>("/marker_post_1", 1);
-    pub_marker_2_ = nh_.advertise<visualization_msgs::Marker>("/marker_post_2", 1);
-    pub_marker_3_ = nh_.advertise<visualization_msgs::Marker>("/marker_post_3", 1);
-    pub_marker_4_ = nh_.advertise<visualization_msgs::Marker>("/marker_post_4", 1);
-    pub_marker_5_ = nh_.advertise<visualization_msgs::Marker>("/marker_post_5", 1);
-    pub_marker_6_ = nh_.advertise<visualization_msgs::Marker>("/marker_post_6", 1);
+    pub_marker_1_ = nh_.advertise<visualization_msgs::Marker>("marker_post_1", 1);
+    pub_marker_2_ = nh_.advertise<visualization_msgs::Marker>("marker_post_2", 1);
+    pub_marker_3_ = nh_.advertise<visualization_msgs::Marker>("marker_post_3", 1);
+    pub_marker_4_ = nh_.advertise<visualization_msgs::Marker>("marker_post_4", 1);
+    pub_marker_5_ = nh_.advertise<visualization_msgs::Marker>("marker_post_5", 1);
+    pub_marker_6_ = nh_.advertise<visualization_msgs::Marker>("marker_post_6", 1);
 
-    pub_position_post_1_ = nh_.advertise<geometry_msgs::PointStamped>("/position_post_1", 1);
-    pub_position_post_2_ = nh_.advertise<geometry_msgs::PointStamped>("/position_post_2", 1);
-    pub_position_post_3_ = nh_.advertise<geometry_msgs::PointStamped>("/position_post_3", 1);
+    pub_position_post_1_ = nh_.advertise<geometry_msgs::PointStamped>("position_post_1", 1);
+    pub_position_post_2_ = nh_.advertise<geometry_msgs::PointStamped>("position_post_2", 1);
+    pub_position_post_3_ = nh_.advertise<geometry_msgs::PointStamped>("position_post_3", 1);
     flag_position_post_1_ = false;
     flag_position_post_2_ = false;
     flag_position_post_3_ = false;
