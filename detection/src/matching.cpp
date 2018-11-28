@@ -5,6 +5,7 @@ Matching::Matching(): nh_(), pnh_("~")
 {
     // Params
     pnh_.param<std::string>("frame_id", frame_id_, "/velodyne");
+    pnh_.param<bool>("generate_virtual_post", flag_gen_virtual_post_, false);
 
     // Subscriptions
     sub_posts_positions_ = nh_.subscribe("posts_positions", 1, &Matching::postsPositionsCallback, this); ///// TODO
@@ -419,81 +420,83 @@ void Matching::toDo()
                 if (vec_labels[i] != -1)
                     prev_positions_posts_.at(i) = now_positions_posts_.at(vec_labels[i]);
             }
-            /*
             //// VIRTUAL POSTS GENERATION ////
-            // Eigen::Vector2f is a column vector of 2 floats
-            Eigen::Vector2f v12, v13, v23, v21;
-            Eigen::Vector2f v12prima, v13prima, v23prima, v21prima;
-            Eigen::Vector2f x,y;
-            x << 1,0; y << 0,1;
+            if(flag_gen_virtual_post_)
+            {
+                // Eigen::Vector2f is a column vector of 2 floats
+                Eigen::Vector2f v12, v13, v23, v21;
+                Eigen::Vector2f v12prima, v13prima, v23prima, v21prima;
+                Eigen::Vector2f x,y;
+                x << 1,0; y << 0,1;
 
-            float costheta;
-            float sintheta;
-            float theta;
-            Eigen::Vector2f p1prima, p2prima, p3prima;
-            p1prima << prev_positions_posts_.at(0).x ,prev_positions_posts_.at(0).y;
-            p2prima << prev_positions_posts_.at(1).x ,prev_positions_posts_.at(1).y;
-            p3prima << prev_positions_posts_.at(2).x ,prev_positions_posts_.at(2).y;
-            Eigen::Matrix2f rotation_matrix;
-            // Generate virtual posts positions from known ones
-            // Post 1 not detected
-            if(!flag_position_post_1_)
-            {
-                // TODO: Adjust these values to the dimensions of the dock
-                v23 << 8.5915, 0;
-                v21 << 0.7967, 3.6132;
-                v23prima = p3prima - p2prima;
-                // Calculate angle between v23prima and v23
-                costheta = v23prima.dot(v23)/(v23prima.norm()*v23.norm());
-                sintheta = v23prima.dot(y)/(v23prima.norm());
-                theta = atan2(sintheta,costheta);
-                // Calculate v21prima from v21
-                calculateRotationMatrix(theta, rotation_matrix);
-                v21prima = rotation_matrix * v21;
-                // Get post 1 position
-                p1prima = p2prima + v21prima;
-                prev_positions_posts_.at(0).x = p1prima(0);
-                prev_positions_posts_.at(0).y = p1prima(1);
+                float costheta;
+                float sintheta;
+                float theta;
+                Eigen::Vector2f p1prima, p2prima, p3prima;
+                p1prima << prev_positions_posts_.at(0).x ,prev_positions_posts_.at(0).y;
+                p2prima << prev_positions_posts_.at(1).x ,prev_positions_posts_.at(1).y;
+                p3prima << prev_positions_posts_.at(2).x ,prev_positions_posts_.at(2).y;
+                Eigen::Matrix2f rotation_matrix;
+                // Generate virtual posts positions from known ones
+                // Post 1 not detected
+                if(!flag_position_post_1_)
+                {
+                    // TODO: Adjust these values to the dimensions of the dock
+                    v23 << 8.5915, 0;
+                    v21 << 0.7967, 3.6132;
+                    v23prima = p3prima - p2prima;
+                    // Calculate angle between v23prima and v23
+                    costheta = v23prima.dot(v23)/(v23prima.norm()*v23.norm());
+                    sintheta = v23prima.dot(y)/(v23prima.norm());
+                    theta = atan2(sintheta,costheta);
+                    // Calculate v21prima from v21
+                    calculateRotationMatrix(theta, rotation_matrix);
+                    v21prima = rotation_matrix * v21;
+                    // Get post 1 position
+                    p1prima = p2prima + v21prima;
+                    prev_positions_posts_.at(0).x = p1prima(0);
+                    prev_positions_posts_.at(0).y = p1prima(1);
+                }
+                // Post 2 not detected
+                else if(!flag_position_post_2_)
+                {
+                    // TODO: Adjust these values to the dimensions of the dock
+                    v13 << 8.5915, 0;
+                    v12 << 0.7967, -3.6132;
+                    v13prima = p3prima - p1prima;
+                    // Calculate angle between v13prima and v13
+                    costheta = v13prima.dot(v13)/(v13prima.norm()*v13.norm());
+                    sintheta = v13prima.dot(y)/(v13prima.norm());
+                    theta = atan2(sintheta,costheta);
+                    // Calculate v12prima from v12
+                    calculateRotationMatrix(theta, rotation_matrix);
+                    v12prima = rotation_matrix * v12;
+                    // Get post 2 position
+                    p2prima = p1prima + v12prima;
+                    prev_positions_posts_.at(1).x = p2prima(0);
+                    prev_positions_posts_.at(1).y = p2prima(1);
+                }
+                // Post 3 not detected
+                else if(!flag_position_post_3_)
+                {
+                    // TODO: Adjust these values to the dimensions of the dock
+                    v12 << 0,-3.7;
+                    v13 << 8.39,-3.7/2;
+                    v12prima = p2prima - p1prima;
+                    // Calculate angle between v12prima and v12
+                    costheta = v12prima.dot(v12)/(v12prima.norm()*v12.norm());
+                    sintheta = v12prima.dot(x)/(v12prima.norm());
+                    theta = atan2(sintheta,costheta);
+                    // Calculate v13prima from v13
+                    calculateRotationMatrix(theta, rotation_matrix);
+                    v13prima = rotation_matrix * v13;
+                    // Get post 3 position
+                    p3prima = p1prima + v13prima;
+                    prev_positions_posts_.at(2).x = p3prima(0);
+                    prev_positions_posts_.at(2).y = p3prima(1);
+                }
             }
-            // Post 2 not detected
-            else if(!flag_position_post_2_)
-            {
-                // TODO: Adjust these values to the dimensions of the dock
-                v13 << 8.5915, 0;
-                v12 << 0.7967, -3.6132;
-                v13prima = p3prima - p1prima;
-                // Calculate angle between v13prima and v13
-                costheta = v13prima.dot(v13)/(v13prima.norm()*v13.norm());
-                sintheta = v13prima.dot(y)/(v13prima.norm());
-                theta = atan2(sintheta,costheta);
-                // Calculate v12prima from v12
-                calculateRotationMatrix(theta, rotation_matrix);
-                v12prima = rotation_matrix * v12;
-                // Get post 2 position
-                p2prima = p1prima + v12prima;
-                prev_positions_posts_.at(1).x = p2prima(0);
-                prev_positions_posts_.at(1).y = p2prima(1);
-            }
-            // Post 3 not detected
-            else if(!flag_position_post_3_)
-            {
-                // TODO: Adjust these values to the dimensions of the dock
-                v12 << 0,-3.7;
-                v13 << 8.39,-3.7/2;
-                v12prima = p2prima - p1prima;
-                // Calculate angle between v12prima and v12
-                costheta = v12prima.dot(v12)/(v12prima.norm()*v12.norm());
-                sintheta = v12prima.dot(x)/(v12prima.norm());
-                theta = atan2(sintheta,costheta);
-                // Calculate v13prima from v13
-                calculateRotationMatrix(theta, rotation_matrix);
-                v13prima = rotation_matrix * v13;
-                // Get post 3 position
-                p3prima = p1prima + v13prima;
-                prev_positions_posts_.at(2).x = p3prima(0);
-                prev_positions_posts_.at(2).y = p3prima(1);
-            }
-            ////////////////////////////////////// */
+            //////////////////////////////////////
             // Store identified posts positions
             for (int i = 0; i < prev_positions_posts_.size(); i++)
                 savePose(i, prev_positions_posts_.at(i));

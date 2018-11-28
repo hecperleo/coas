@@ -66,6 +66,7 @@ private:
   bool flag_position_post_2_;
   bool flag_position_post_3_;
 
+  bool flag_gen_virtual_post_;
   // VIRTUAL POST CREATION DEBUGGING FILES
   std::ofstream file_virtual_post_1_, file_virtual_post_2_, file_virtual_post_3_;
 };

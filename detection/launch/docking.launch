@@ -15,5 +15,6 @@
     </node>
     <node pkg="detection" type="matching_node" name="matching_node" output="screen" required="true">
         <param name="frame_id" value="/velodyne" type="string"/>
+        <param name="generate_virtual_post" value="false" type="bool"/>
     </node>
 </launch>
