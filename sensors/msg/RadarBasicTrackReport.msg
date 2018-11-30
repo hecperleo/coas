@@ -1,4 +1,4 @@
-# Sehirus Basic Track Report msg
+# Radar Basic Track Report msg
 
 ##### CONSTANTS #####
 uint8 UDPMSGSIZE=80 # 76

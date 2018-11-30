@@ -1,4 +1,4 @@
-# Sehirus Extended Track Report msg
+# Radar Extended Track Report msg
 
 ##### CONSTANTS #####
 uint8 UDPMSGSIZE=188
@@ -11,7 +11,7 @@ uint8 INNOERRYPOS=172
 
 ##### FIELDS #####
 # Normal Message fields
-SehirusNormalTrackReport normalMsg 
+RadarNormalTrackReport normalMsg 
 
 # Estimation gain on X coordinate
 float32 gainX
