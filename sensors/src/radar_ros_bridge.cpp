@@ -1,9 +1,9 @@
-#include "sensors/sehirus_conversion.h"
+#include "sensors/radar_ros_bridge.h"
 
 /**
-* SehirusConversion constructor
+* RadarRosBridge constructor
 */
-SehirusConversion::SehirusConversion(const uint16_t &heartbeatListeningPort, const uint16_t &trackReportListeningPort):
+RadarRosBridge::RadarRosBridge(const uint16_t &heartbeatListeningPort, const uint16_t &trackReportListeningPort):
 _nodeHandle(),
 _heartbeatSocket(_io_service, boostUdp::endpoint(boostUdp::v4(), heartbeatListeningPort)),
 _trackReportSocket(_io_service, boostUdp::endpoint(boostUdp::v4(), trackReportListeningPort))
@@ -11,14 +11,14 @@ _trackReportSocket(_io_service, boostUdp::endpoint(boostUdp::v4(), trackReportLi
 }
 
 /**
-* SehirusConversion destructor
+* RadarRosBridge destructor
 */
-SehirusConversion::~SehirusConversion()
+RadarRosBridge::~RadarRosBridge()
 {
 
 }
 
-void SehirusConversion::udp_handle_receive_heartbeat(const boost::system::error_code& error,
+void RadarRosBridge::udp_handle_receive_heartbeat(const boost::system::error_code& error,
 										   			 std::size_t num_bytes)
 {
 	if (!error)
@@ -89,12 +89,12 @@ void SehirusConversion::udp_handle_receive_heartbeat(const boost::system::error_
     }
 	_heartbeatSocket.async_receive_from(
 			boost::asio::buffer(_heartbeatRecvBuf), _server_endpoint,
-			boost::bind(&SehirusConversion::udp_handle_receive_heartbeat, this,
+			boost::bind(&RadarRosBridge::udp_handle_receive_heartbeat, this,
 						boost::asio::placeholders::error,
 						boost::asio::placeholders::bytes_transferred));
 }
 
-void SehirusConversion::udp_handle_receive_trackreport(const boost::system::error_code& error,
+void RadarRosBridge::udp_handle_receive_trackreport(const boost::system::error_code& error,
 										   			   std::size_t num_bytes)
 {
 	if (!error)
@@ -135,13 +135,13 @@ void SehirusConversion::udp_handle_receive_trackreport(const boost::system::erro
 
 		_trackReportSocket.async_receive_from(
 				boost::asio::buffer(_trackReportRecvBuf), _server_endpoint,
-				boost::bind(&SehirusConversion::udp_handle_receive_trackreport, this,
+				boost::bind(&RadarRosBridge::udp_handle_receive_trackreport, this,
 				boost::asio::placeholders::error,
 				boost::asio::placeholders::bytes_transferred));
 	}
 }
 
-void SehirusConversion::basicTrackReportMsgToROS()
+void RadarRosBridge::basicTrackReportMsgToROS()
 {
 	float aux_float = 0;
     _basicTrackReportMsg.trackID = (uint32_t)_trackReportRecvBuf[BasicTrackReport::TRACKIDPOS+1] << 8  |
@@ -181,7 +181,7 @@ void SehirusConversion::basicTrackReportMsgToROS()
     _basicTrackReportMsg.meaAzimuthSize = aux_float;
 }
 
-void SehirusConversion::normalTrackReportMsgToROS()
+void RadarRosBridge::normalTrackReportMsgToROS()
 {
 	float aux_float = 0;
 	// Convert basic part of the message
@@ -220,7 +220,7 @@ void SehirusConversion::normalTrackReportMsgToROS()
     _normalTrackReportMsg.density = aux_float;
 }
 
-void SehirusConversion::extendedTrackReportMsgToROS()
+void RadarRosBridge::extendedTrackReportMsgToROS()
 {
 	float aux_float = 0;
 	// Convert normal part of the message
@@ -241,12 +241,12 @@ void SehirusConversion::extendedTrackReportMsgToROS()
     _extendedTrackReportMsg.innoErrorY = aux_float;
 }
 
-void SehirusConversion::main()
+void RadarRosBridge::main()
 {
-	_heartBeatPublisher = _nodeHandle.advertise<sensors::SehirusHeartbeat>("heartbeat", 10);
-	_basicTrackReportPublisher = _nodeHandle.advertise<sensors::SehirusBasicTrackReport>("basic_track_report", 10);
-	_normalTrackReportPublisher = _nodeHandle.advertise<sensors::SehirusNormalTrackReport>("normal_track_report", 10);
-	_extendedTrackReportPublisher = _nodeHandle.advertise<sensors::SehirusExtendedTrackReport>("extended_track_report", 10);
+	_heartBeatPublisher = _nodeHandle.advertise<sensors::RadarHeartbeat>("heartbeat", 10);
+	_basicTrackReportPublisher = _nodeHandle.advertise<sensors::RadarBasicTrackReport>("basic_track_report", 10);
+	_normalTrackReportPublisher = _nodeHandle.advertise<sensors::RadarNormalTrackReport>("normal_track_report", 10);
+	_extendedTrackReportPublisher = _nodeHandle.advertise<sensors::RadarExtendedTrackReport>("extended_track_report", 10);
 	//ros::Duration(1).sleep();
 	try
 	{
@@ -269,12 +269,12 @@ void SehirusConversion::main()
 
 		_heartbeatSocket.async_receive_from(
 			boost::asio::buffer(_heartbeatRecvBuf), _server_endpoint,
-			boost::bind(&SehirusConversion::udp_handle_receive_heartbeat, this,
+			boost::bind(&RadarRosBridge::udp_handle_receive_heartbeat, this,
 						boost::asio::placeholders::error,
 						boost::asio::placeholders::bytes_transferred));
 		_trackReportSocket.async_receive_from(
 			boost::asio::buffer(_trackReportRecvBuf), _server_endpoint,
-			boost::bind(&SehirusConversion::udp_handle_receive_trackreport, this,
+			boost::bind(&RadarRosBridge::udp_handle_receive_trackreport, this,
 						boost::asio::placeholders::error,
 						boost::asio::placeholders::bytes_transferred));
 
@@ -293,7 +293,7 @@ void SehirusConversion::main()
 
 
 int main(int argc, char** argv) {
-	ros::init(argc, argv, "sehirus_ros_node");
+	ros::init(argc, argv, "radar_ros_bridge");
 	ros::NodeHandle privateNodeHandle("~");
 	// Get parameters
 	int heartbeatListeningPort = HBLSTPORT;		
@@ -301,7 +301,7 @@ int main(int argc, char** argv) {
 	int trackReportListeningPort = TRLSTPORT;
 	privateNodeHandle.getParam("track_report_listening_port", trackReportListeningPort);
 	//***************
-	SehirusConversion sehirusConversion(heartbeatListeningPort, trackReportListeningPort);
-	sehirusConversion.main();
+	RadarRosBridge radar_ros_bridge(heartbeatListeningPort, trackReportListeningPort);
+	radar_ros_bridge.main();
 	return 0;
 }
