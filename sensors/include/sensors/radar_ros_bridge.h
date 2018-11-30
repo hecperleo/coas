@@ -1,5 +1,5 @@
-#ifndef SEHIRUS_CONVERSION_H
-#define SEHIRUS_CONVERSION_H
+#ifndef RADAR_ROS_BRIDGE_H
+#define RADAR_ROS_BRIDGE_H
 
 #include <iostream>
 #include <boost/array.hpp>
@@ -9,16 +9,16 @@
 #include <boost/chrono.hpp>
 #include <pthread.h>
 #include "ros/ros.h"
-#include "sensors/SehirusHeartbeat.h"
-#include "sensors/SehirusBasicTrackReport.h"
-#include "sensors/SehirusNormalTrackReport.h"
-#include "sensors/SehirusExtendedTrackReport.h"
+#include "sensors/RadarHeartbeat.h"
+#include "sensors/RadarBasicTrackReport.h"
+#include "sensors/RadarNormalTrackReport.h"
+#include "sensors/RadarExtendedTrackReport.h"
 
 typedef boost::asio::ip::udp boostUdp;
-typedef sensors::SehirusHeartbeat Heartbeat;
-typedef sensors::SehirusBasicTrackReport BasicTrackReport;
-typedef sensors::SehirusNormalTrackReport NormalTrackReport;
-typedef sensors::SehirusExtendedTrackReport ExtendedTrackReport;
+typedef sensors::RadarHeartbeat Heartbeat;
+typedef sensors::RadarBasicTrackReport BasicTrackReport;
+typedef sensors::RadarNormalTrackReport NormalTrackReport;
+typedef sensors::RadarExtendedTrackReport ExtendedTrackReport;
 
 // Default listening ports
 #define HBLSTPORT 6500 // Heartbeat
@@ -28,10 +28,10 @@ typedef sensors::SehirusExtendedTrackReport ExtendedTrackReport;
 //#define EXTENDEDTRACKREPORTSIZE 188 // bytes
 #define FLOATSIZE 4
 
-class SehirusConversion {
+class RadarRosBrdige {
 public:
-	SehirusConversion(const uint16_t &heartbeatListeningPort, const uint16_t &trackReportListeningPort);
-	~SehirusConversion();
+	RadarRosBrdige(const uint16_t &heartbeatListeningPort, const uint16_t &trackReportListeningPort);
+	~RadarRosBrdige();
 	void main();
 private:
 	void udp_handle_receive_heartbeat(const boost::system::error_code& error,
@@ -49,10 +49,10 @@ private:
 	ros::Publisher  _normalTrackReportPublisher;
 	ros::Publisher  _extendedTrackReportPublisher;
 
-	sensors::SehirusHeartbeat _heartbeatMsg;
-	sensors::SehirusBasicTrackReport _basicTrackReportMsg;
-	sensors::SehirusNormalTrackReport _normalTrackReportMsg;
-	sensors::SehirusExtendedTrackReport _extendedTrackReportMsg;
+	sensors::RadarHeartbeat _heartbeatMsg;
+	sensors::RadarBasicTrackReport _basicTrackReportMsg;
+	sensors::RadarNormalTrackReport _normalTrackReportMsg;
+	sensors::RadarExtendedTrackReport _extendedTrackReportMsg;
 
 	//boost::array<uint8_t, 1> _sendBuf;
 	boost::array<uint8_t, 72> _heartbeatRecvBuf;
@@ -65,4 +65,4 @@ private:
 
 
 
-#endif /* SEHIRUS_CONVERSION_H */
+#endif /* RADAR_ROS_BRIDGE_H */

@@ -45,10 +45,10 @@ find_package(Threads)
 ## Generate messages in the 'msg' folder
  add_message_files(
    FILES
-   SehirusHeartbeat.msg
-   SehirusBasicTrackReport.msg
-   SehirusNormalTrackReport.msg
-   SehirusExtendedTrackReport.msg
+   RadarHeartbeat.msg
+   RadarBasicTrackReport.msg
+   RadarNormalTrackReport.msg
+   RadarExtendedTrackReport.msg
  )
 
 ## Generate services in the 'srv' folder
@@ -135,7 +135,7 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/sensors_node.cpp)
 
-add_executable(sehirus_conversion src/sehirus_conversion.cpp)
+add_executable(radar_ros_bridge src/radar_ros_bridge.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -146,14 +146,14 @@ add_executable(sehirus_conversion src/sehirus_conversion.cpp)
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(sehirus_conversion ${catkin_EXPORTED_TARGETS} ${sensors_EXPORTED_TARGETS})
+add_dependencies(radar_ros_bridge ${catkin_EXPORTED_TARGETS} ${sensors_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
 
-target_link_libraries (sehirus_conversion ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${Threads_LIBRARIES})
+target_link_libraries (radar_ros_bridge ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${Threads_LIBRARIES})
 #############
 ## Install ##
 #############
