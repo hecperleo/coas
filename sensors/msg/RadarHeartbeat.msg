@@ -1,6 +1,6 @@
 # Do not use tab to define messages
 
-# Sehirus Heartbeat msg
+# Radar Heartbeat msg
 
 ##### Constants #####
 uint8 UDPMSGSIZE=72 # UDP message size in bytes

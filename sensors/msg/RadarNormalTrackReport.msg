@@ -1,4 +1,4 @@
-# Sehirus Normal Track Report msg
+# Radar Normal Track Report msg
 
 ##### CONSTANTS #####
 uint8 UDPMSGSIZE=160 #152
@@ -21,7 +21,7 @@ uint8 DENSITYPOS=136
 
 ##### FIELDS #####
 # Basic Message fields
-SehirusBasicTrackReport basicMsg
+RadarBasicTrackReport basicMsg
 
 # Measured X cartesian position
 float32 meaX

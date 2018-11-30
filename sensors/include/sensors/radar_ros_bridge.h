@@ -28,10 +28,10 @@ typedef sensors::RadarExtendedTrackReport ExtendedTrackReport;
 //#define EXTENDEDTRACKREPORTSIZE 188 // bytes
 #define FLOATSIZE 4
 
-class RadarRosBrdige {
+class RadarRosBridge {
 public:
-	RadarRosBrdige(const uint16_t &heartbeatListeningPort, const uint16_t &trackReportListeningPort);
-	~RadarRosBrdige();
+	RadarRosBridge(const uint16_t &heartbeatListeningPort, const uint16_t &trackReportListeningPort);
+	~RadarRosBridge();
 	void main();
 private:
 	void udp_handle_receive_heartbeat(const boost::system::error_code& error,
