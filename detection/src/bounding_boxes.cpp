@@ -19,7 +19,7 @@ BoundingBoxes::BoundingBoxes() : nh_(), pnh_("~")
     pub_cloud_clusters_ = nh_.advertise<sensor_msgs::PointCloud2>("visualization_clusters", 1);
     pub_boxes_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("bounding_boxes", 1);
     pub_merge_boxes_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("merge_bounding_boxes", 1);
-    pub_post_candidates_boxes_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("reference_bounding_boxes", 1);
+    pub_post_reference_boxes_ = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("reference_bounding_boxes", 1);
     pub_path_post_1_ = nh_.advertise<nav_msgs::Path>("path_post_1", 1);
     pub_path_post_2_ = nh_.advertise<nav_msgs::Path>("path_post_2", 1);
     pub_path_post_3_ = nh_.advertise<nav_msgs::Path>("path_post_3", 1);
@@ -53,7 +53,7 @@ BoundingBoxes::BoundingBoxes() : nh_(), pnh_("~")
 
     // Set reference frame for the messages that are sent
     box_.header.frame_id = boxes_.header.frame_id = frame_id_;
-    post_candidates_boxes_.header.frame_id = merge_boxes_.header.frame_id = frame_id_;
+    post_candidates_boxes_.header.frame_id = post_reference_boxes_.header.frame_id = merge_boxes_.header.frame_id = frame_id_;
 }
 
 BoundingBoxes::~BoundingBoxes()
@@ -275,7 +275,7 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
         {
             // Check distances between posts
             checkDistancesBetweenPosts();
-            pub_post_candidates_boxes_.publish(post_candidates_boxes_);     
+            pub_post_reference_boxes_.publish(post_reference_boxes_);     
         }
 
         // Calculate all possible polygons formed by clusters
@@ -296,7 +296,7 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
         // If the docking phase is active, send reference boxes as candidates
         if(phase_ == DOCKING)
         {
-            for(auto it = post_candidates_boxes_.boxes.begin(); it != post_candidates_boxes_.boxes.end(); ++it)
+            for(auto it = post_reference_boxes_.boxes.begin(); it != post_reference_boxes_.boxes.end(); ++it)
             {
                 candidate_msg.size = tracking::CandidateMsg::SIZE_UNKNOWN;
                 candidate_msg.location = it->pose.position;
@@ -326,6 +326,7 @@ void BoundingBoxes::cleanVariables()
     vec_label_polygon_.clear();
     boxes_.boxes.clear();
     post_candidates_boxes_.boxes.clear();
+    post_reference_boxes_.boxes.clear();
     merge_boxes_.boxes.clear();
     vec_vec_label_polygon_.clear();
     path_post_1_.poses.clear();
@@ -446,31 +447,28 @@ void BoundingBoxes::checkDistancesBetweenPosts()
     // If there is more than one post detected
     if (post_candidates_boxes_.boxes.size() > 1)
     {
-        std::cout << "CHECK DISTANCE BETWEEN POSTS" << std::endl;
         std::vector<int> vec_post_candidates_boxes_indices(3,-1);
         bool flag_distance_post_12_detected;
         bool flag_distance_post_13_detected;
         bool flag_stop = false;
-        ///////// TODO CHECK THIS LOOP
-        // Calculate the distance between all posts
-        std::cout << "Number of possible posts: " << post_candidates_boxes_.boxes.size() << std::endl;
+        // Try to find 3 bounding boxes that create a triangle with same dimensions as the one formed by the posts in the dock
         for (int i = 0; (i < post_candidates_boxes_.boxes.size()) && !flag_stop; ++i)
         {
             for(int j=i+1; (j < post_candidates_boxes_.boxes.size()) && !flag_stop; ++j)
             {
                 flag_distance_post_12_detected = false;
                 flag_distance_post_13_detected = false;
+                // Calculate distance between candidates i and j
                 float distance = calculateDistance2Points(post_candidates_boxes_.boxes.at(i).pose.position,
                                                           post_candidates_boxes_.boxes.at(j).pose.position);
-                std::cout << "Distance between candidates i: " << i << " and j: " << j << " = " << distance << std::endl;
                 if( (min_distance_post_12_ < distance) && (distance < max_distance_post_12_) )
                 {
-                    std::cout << "Distance match the target distance between post 1 and 2" << std::endl;
+                    // Distance matches the target distance between post 1 and 2
                     flag_distance_post_12_detected = true;
                 }
                 else if ( (min_distance_post_13_ < distance) && (distance < max_distance_post_13_) )
                 {
-                    std::cout << "Distance match the target distance between post 1 and 3" << std::endl;
+                    // Distance matches the target distance between post 1 and 3
                     flag_distance_post_13_detected = true;
                 }
 
@@ -483,23 +481,24 @@ void BoundingBoxes::checkDistancesBetweenPosts()
                     // Keep looking for another candidate post to complete the triangle
                     for(int k=j+1; (k < post_candidates_boxes_.boxes.size()) && !flag_stop; ++k)
                     {
+                        // Calculate distance between candidates i and k
                         float distance1 = calculateDistance2Points(post_candidates_boxes_.boxes.at(i).pose.position,
                                                                    post_candidates_boxes_.boxes.at(k).pose.position);
+                        // Calculate distance between candidates j and k
                         float distance2 = calculateDistance2Points(post_candidates_boxes_.boxes.at(j).pose.position,
                                                                    post_candidates_boxes_.boxes.at(k).pose.position);
-                        std::cout << "Distance between candidates i: " << i << " and k: " << k << " = " << distance1 << std::endl;
-                        std::cout << "Distance between candidates j: " << j << " and k: " << k << " = " << distance2 << std::endl;
+
                         // If distance between post i and j is the short side of the triangle
                         // The distances from k to i and j must be equal to the long side of the triangle
                         if( flag_distance_post_12_detected &&
                             (min_distance_post_13_ < distance1) && (distance1 < max_distance_post_13_) &&
                             (min_distance_post_13_ < distance2) && (distance2 < max_distance_post_13_) 
                         ){
+                            // Triangle is complete
                             counter_posts_ = 3;
                             vec_post_candidates_boxes_indices.at(2) = k;
                             flag_stop = true;
-                            std::cout << "Triangle complete" << std::endl;
-
+                        
                         }
                         // If distance between post i and j is the long side of the triangle
                         // one of the other distance must also be the long side of the triangle
@@ -510,11 +509,10 @@ void BoundingBoxes::checkDistancesBetweenPosts()
                                   ((min_distance_post_12_ < distance1) && (distance1 < max_distance_post_12_) &&
                                   (min_distance_post_13_ < distance2) && (distance2 < max_distance_post_13_))) 
                         ){
+                            // Triangle is complete
                             counter_posts_ = 3;
                             vec_post_candidates_boxes_indices.at(2) = k;
                             flag_stop = true;
-                            std::cout << "Triangle complete" << std::endl;
-
                         }
                     } // end for k
                 } 
@@ -523,11 +521,6 @@ void BoundingBoxes::checkDistancesBetweenPosts()
          
         geometry_msgs::Point point_origin;
         point_origin.x = point_origin.y = point_origin.z = 0;
-        // Publish posts
-        std::cout << "Publishing posts info" << std::endl;
-        float distance12;
-        float distance13;
-        float distance23;
         switch(counter_posts_)
         {
             case 2:
@@ -535,12 +528,9 @@ void BoundingBoxes::checkDistancesBetweenPosts()
                     post_candidates_boxes_.boxes.at(vec_post_candidates_boxes_indices.at(0)).pose.position);
                 path_post_2_ = constructPath(point_origin,
                     post_candidates_boxes_.boxes.at(vec_post_candidates_boxes_indices.at(1)).pose.position);
-                distance12 = calculateDistance2Points(path_post_1_.poses.at(1).pose.position, path_post_2_.poses.at(1).pose.position);
-                std::cout << "Distance path between 1 and 2 : " << distance12 << std::endl;
                 path_post_12_ = constructPath(path_post_1_.poses.at(1).pose.position, path_post_2_.poses.at(1).pose.position);
-                pub_path_post_1_.publish(path_post_1_);
-                pub_path_post_2_.publish(path_post_2_);
-                pub_path_post_12_.publish(path_post_12_);
+                post_reference_boxes_.boxes.push_back(post_candidates_boxes_.boxes.at(vec_post_candidates_boxes_indices.at(0)));
+                post_reference_boxes_.boxes.push_back(post_candidates_boxes_.boxes.at(vec_post_candidates_boxes_indices.at(1)));
                 break;
             case 3:
                 path_post_1_ = constructPath(point_origin,
@@ -549,23 +539,25 @@ void BoundingBoxes::checkDistancesBetweenPosts()
                     post_candidates_boxes_.boxes.at(vec_post_candidates_boxes_indices.at(1)).pose.position);
                 path_post_3_ = constructPath(point_origin,
                     post_candidates_boxes_.boxes.at(vec_post_candidates_boxes_indices.at(2)).pose.position);
-                distance12 = calculateDistance2Points(path_post_1_.poses.at(1).pose.position, path_post_2_.poses.at(1).pose.position);
-                distance13 = calculateDistance2Points(path_post_1_.poses.at(1).pose.position, path_post_3_.poses.at(1).pose.position);
-                distance23 = calculateDistance2Points(path_post_2_.poses.at(1).pose.position, path_post_3_.poses.at(1).pose.position);
-                std::cout << "Distance path between 1 and 2 : " << distance12 << std::endl;
-                std::cout << "Distance path between 1 and 3 : " << distance13 << std::endl;
-                std::cout << "Distance path between 2 and 3 : " << distance23 << std::endl;
                 path_post_12_ = constructPath(path_post_1_.poses.at(1).pose.position, path_post_2_.poses.at(1).pose.position);
                 path_post_13_ = constructPath(path_post_1_.poses.at(1).pose.position, path_post_3_.poses.at(1).pose.position);
                 path_post_23_ = constructPath(path_post_2_.poses.at(1).pose.position, path_post_3_.poses.at(1).pose.position);
-                pub_path_post_1_.publish(path_post_1_);
-                pub_path_post_2_.publish(path_post_2_);
-                pub_path_post_3_.publish(path_post_3_);
-                pub_path_post_12_.publish(path_post_12_);
-                pub_path_post_13_.publish(path_post_13_);
-                pub_path_post_23_.publish(path_post_23_);
+                post_reference_boxes_.boxes.push_back(post_candidates_boxes_.boxes.at(vec_post_candidates_boxes_indices.at(0)));
+                post_reference_boxes_.boxes.push_back(post_candidates_boxes_.boxes.at(vec_post_candidates_boxes_indices.at(1)));
+                post_reference_boxes_.boxes.push_back(post_candidates_boxes_.boxes.at(vec_post_candidates_boxes_indices.at(2)));
                 break;
         }
+        // Publish path to posts and path between posts
+        // in this way the rviz display is refreshed even
+        // when no information about a certain post is received
+        // so previuos data is not stuck for a long time in the screen
+        pub_path_post_1_.publish(path_post_1_);
+        pub_path_post_2_.publish(path_post_2_);
+        pub_path_post_3_.publish(path_post_3_);
+        pub_path_post_12_.publish(path_post_12_);
+        pub_path_post_13_.publish(path_post_13_);
+        pub_path_post_23_.publish(path_post_23_); 
+
         /// Send post positions in a single message
         /// This avoid mixing information from separate instants in time
         detection::PostsPositions posts_positions;

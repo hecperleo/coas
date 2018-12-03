@@ -35,7 +35,9 @@
     <node pkg="detection" type="matching_node" name="matching_node" output="screen" required="true">
         <!-- Params -->
         <param name="frame_id" value="/velodyne" type="string"/>
-        <param name="generate_virtual_post" value="false" type="bool"/>
+        <param name="generate_virtual_post" value="true" type="bool"/>
+        <!-- Subscribers -->
+        <remap from="posts_positions" to="/posts_positions"/>
         <!-- Publishers -->
         <remap from="marker_post_1" to="/marker_post_1"/>
         <remap from="marker_post_2" to="/marker_post_2"/>
@@ -46,7 +48,5 @@
         <remap from="position_post_1" to="/position_post_1"/>
         <remap from="position_post_2" to="/position_post_2"/>
         <remap from="position_post_3" to="/position_post_3"/>
-        <!-- Subscribers -->
-        <remap from="posts_positions" to="/posts_positions"/>
     </node>
 </launch>

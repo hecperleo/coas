@@ -57,7 +57,7 @@ private:
   // Cluster Publishers
   ros::Publisher pub_cloud_clusters_;
   // Bounding Boxer Publishers
-  ros::Publisher pub_boxes_, pub_merge_boxes_, pub_post_candidates_boxes_;
+  ros::Publisher pub_boxes_, pub_merge_boxes_, pub_post_reference_boxes_;
   ros::Publisher pub_path_post_1_, pub_path_post_2_, pub_path_post_3_; 
   ros::Publisher pub_path_post_12_, pub_path_post_13_, pub_path_post_23_;
   ros::Publisher pub_posts_positions_; /// TODO
@@ -71,7 +71,7 @@ private:
   std::vector<int> vec_label_polygon_;
   std::vector<std::vector<int>> vec_vec_label_polygon_;
   jsk_recognition_msgs::BoundingBox box_;
-  jsk_recognition_msgs::BoundingBoxArray boxes_, post_candidates_boxes_, merge_boxes_;
+  jsk_recognition_msgs::BoundingBoxArray boxes_, post_candidates_boxes_, post_reference_boxes_ ,merge_boxes_;
   float x_max_, x_min_, y_max_, y_min_, z_max_, z_min_, x_center_, y_center_, z_center_;
   float max_dist_x_, max_dist_y_, max_dist_z_, max_dist_x_polygon_, max_dist_y_polygon_, max_dist_z_polygon_;
   nav_msgs::Path path_post_1_, path_post_2_, path_post_3_, path_post_12_, path_post_13_, path_post_23_;
