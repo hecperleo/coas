@@ -33,5 +33,4 @@
         <remap from="path_post_13" to="/path_post_13"/>
         <remap from="path_post_23" to="/path_post_23"/>
     </node>
-    </node>
 </launch>
