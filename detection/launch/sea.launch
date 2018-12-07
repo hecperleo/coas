@@ -2,8 +2,6 @@
     <!-- Docking: 1 | Harbor: 2 | Sea: 3 -->
     <node pkg="rostopic" type="rostopic" name="phase" args="pub /phase std_msgs/Int8 3"/>
 
-    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find detection)/rviz/sea.rviz" required="true"/>
-
     <node pkg="filtering" type="sensor_filter_node" name="sensor_filter_node" output="screen" required="true">
         <!-- Params -->
         <param name="frame_id" value="/velodyne" type="string"/>

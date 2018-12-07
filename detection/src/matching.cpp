@@ -218,7 +218,7 @@ void Matching::toDo()
             // Next code make sure the posts are ordered correctly, following next criteria.
             // post 1: port side (babor)
             // post 2: starboard side (estribor)
-            // post 3: furthermost post
+            // post 3: bow or furthermost post (proa)
             // The furthermost post from other ones is the 3rd post
             // Then we need to identify the other ones knowing where is the 3rd post
 

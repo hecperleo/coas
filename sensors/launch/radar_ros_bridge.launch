@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
-	<node name="sehirus_listening_node" pkg="sensors" type="sehirus_conversion">
+	<node name="radar_ros_bridge" pkg="sensors" type="radar_ros_bridge">
 		<!-- Params -->
 		<param name="heartbeat_listening_port" value="6500" type="int"/>
 		<param name="track_report_listening_port" value="6501" type="int"/>
