@@ -1,7 +1,6 @@
 <launch>
     <!-- Docking: 1 | Harbor: 2 | Sea: 3 -->
     <node pkg="rostopic" type="rostopic" name="phase" args="pub /phase std_msgs/Int8 2"/>
-    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find detection)/rviz/harbor.rviz" required="true"/>
 
     <node pkg="filtering" type="sensor_filter_node" name="sensor_filter_node" output="screen" required="true">
         <!-- Params -->
@@ -24,7 +23,7 @@
         <remap from="visualization_clusters" to="/visualization_clusters"/>
         <remap from="bounding_boxes" to="/bounding_boxes"/>
         <remap from="merge_bounding_boxes" to="/merge_bounding_boxes"/>
-        <remap from="reference_bounding_boxes" to="reference_bounding_boxes"/>
+        <remap from="reference_bounding_boxes" to="/reference_bounding_boxes"/>
         <remap from="path_post_1" to="/path_post_1"/>
         <remap from="path_post_2" to="/path_post_2"/>
         <remap from="path_post_3" to="/path_post_3"/>

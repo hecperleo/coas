@@ -1,5 +1,5 @@
 <launch>
-	<node name="sehirus_conversion_node" pkg="sensors" type="sehirus_conversion" output="screen" />
+	<node name="radar_ros_bridge" pkg="sensors" type="radar_ros_bridge" output="screen" />
 	<node name="heartbeat_listener" pkg="rostopic" type="rostopic" args="echo /heartbeat" output="screen" />
 	<node name="mock_heartbeat_server" pkg="sensors" type="mock_heartbeat_server.sh" output="screen" cwd="node" />
 </launch>

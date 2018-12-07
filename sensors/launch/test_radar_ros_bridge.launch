@@ -1,5 +1,5 @@
 <launch>
-	<include file="$(find sensors)/launch/sehirus_conversion.launch"/>
+	<include file="$(find sensors)/launch/radar_ros_bridge.launch"/>
 	<node name="heartbeat_listener" pkg="rostopic" type="rostopic" args="echo /heartbeat" output="screen" />
 	<node name="basic_trackreport_listener" pkg="rostopic" type="rostopic" args="echo /basic_track_report" output="screen" />
 	<node name="normal_trackreport_listener" pkg="rostopic" type="rostopic" args="echo /normal_track_report" output="screen" />

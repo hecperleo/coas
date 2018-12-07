@@ -23,30 +23,30 @@
         <remap from="visualization_clusters" to="/visualization_clusters"/>
         <remap from="bounding_boxes" to="/bounding_boxes"/>
         <remap from="merge_bounding_boxes" to="/merge_bounding_boxes"/>
-        <remap from="reference_bounding_boxes" to="reference_bounding_boxes"/>
+        <remap from="reference_bounding_boxes" to="/reference_bounding_boxes"/>
         <remap from="path_post_1" to="/path_post_1"/>
         <remap from="path_post_2" to="/path_post_2"/>
         <remap from="path_post_3" to="/path_post_3"/>
         <remap from="path_post_12" to="/path_post_12"/>
         <remap from="path_post_13" to="/path_post_13"/>
         <remap from="path_post_23" to="/path_post_23"/>
+        <remap from="posts_positions" to="/posts_positions"/>
     </node>
     <node pkg="detection" type="matching_node" name="matching_node" output="screen" required="true">
         <!-- Params -->
         <param name="frame_id" value="/velodyne" type="string"/>
+        <param name="generate_virtual_post" value="true" type="bool"/>
         <!-- Subscribers -->
-        <remap from="path_post_1" to="/path_post_1"/>
-        <remap from="path_post_2" to="/path_post_2"/>
-        <remap from="path_post_3" to="/path_post_3"/>
-        <remap from="path_post_12" to="/path_post_12"/>
-        <remap from="path_post_13" to="/path_post_13"/>
-        <remap from="path_post_23" to="/path_post_23"/>
+        <remap from="posts_positions" to="/posts_positions"/>
         <!-- Publishers -->
         <remap from="marker_post_1" to="/marker_post_1"/>
         <remap from="marker_post_2" to="/marker_post_2"/>
         <remap from="marker_post_3" to="/marker_post_3"/>
-        <remap from="marker_post_4" to="/marker_post_4"/>
         <remap from="marker_post_5" to="/marker_post_5"/>
         <remap from="marker_post_6" to="/marker_post_6"/>
+        <remap from="marker_post_4" to="/marker_post_4"/>
+        <remap from="position_post_1" to="/position_post_1"/>
+        <remap from="position_post_2" to="/position_post_2"/>
+        <remap from="position_post_3" to="/position_post_3"/>
     </node>
 </launch>
