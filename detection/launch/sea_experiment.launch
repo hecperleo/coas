@@ -1,6 +1,6 @@
 <launch>
 	<param name="/use_sim_time" value="true" type="boolean"/>
 	<arg name="bags_path" doc="path to bag files" default="$(env HOME)/bags" />
-    <node pkg="rosbag" type="play" name="rosbag" args=" --loop --start=40 -r 1 --duration=15 $(arg bags_path)/Na/20180425_Pruebas/2018-04-25-12-57-04.bag" required="true"/>
+    <node pkg="rosbag" type="play" name="rosbag" args="--clock --loop --start=40 -r 1 --duration=15 $(arg bags_path)/Na/20180425_Pruebas/2018-04-25-12-57-04.bag" required="true"/>
     <include file="$(find detection)/launch/sea.launch"/>
 </launch>
