@@ -24,7 +24,7 @@ public:
   Matching();
   ~Matching();
 
-  void toDo();
+  void runOnce();
 
 private:
   //
@@ -53,7 +53,7 @@ private:
 
   // Variables
   std::string frame_id_;
-  int counter_;
+  bool flag_matching_initialized_;
   geometry_msgs::Point now_position_post_1_, now_position_post_2_, now_position_post_3_;
   std::vector<geometry_msgs::Point> prev_positions_posts_, now_positions_posts_;
   std::ofstream file_post_1_, file_post_2_, file_post_3_, file_post_1_time_, file_post_2_time_, file_post_3_time_;

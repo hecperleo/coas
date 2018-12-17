@@ -8,7 +8,7 @@ int main(int argc, char **argv)
     while(ros::ok())
     {
     	ros::spinOnce();
-    	match.toDo();
+    	match.runOnce();
     	rate.sleep();
     }
     return 0;

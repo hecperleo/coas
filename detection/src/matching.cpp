@@ -46,7 +46,7 @@ Matching::Matching(): nh_(), pnh_("~")
     //file_virtual_post_2_.open(log_virtual_post + "virtual_post_2");
     file_virtual_post_3_.open(log_virtual_post.str() + "virtual_post_3");
 
-    counter_ = 0;
+    flag_matching_initialized_ = false;
 
     // INITIALIZE MARKERS WITH DEFAULT VALUES THAT DOESN'T CHANGE DURING EXECUTION
     marker_post_1_.header.frame_id = marker_post_2_.header.frame_id = marker_post_3_.header.frame_id = "/velodyne";
@@ -201,13 +201,19 @@ void Matching::savePose(const int &nPost, const geometry_msgs::Point &waypoint)
     }
 }
 
-void Matching::toDo()
+/** 
+*   Process received post position messages
+*/
+void Matching::runOnce()
 {
-    // At the initial instant it stores the first entry as valid labels
-    switch (counter_)
+    // For starting the matching, 3 posts positions are required.
+    // Until it doesn't receive those, the flag stays down (false).
+    // Once 3 positions are received "simultaneosly", the flag is raised (true),
+    // and will stay raised until the end of the program.
+    switch (flag_matching_initialized_)
     {
-    case 0:
-        // It initializes if there are three valid posts
+    case false:
+        // It initializes the matching if there are three valid posts
         if (flag_position_post_1_ && flag_position_post_2_ && flag_position_post_3_)
         {
             ROS_WARN("Init Matching");
@@ -348,7 +354,7 @@ void Matching::toDo()
             now_positions_posts_.clear();
         }
         break;
-    case 1:
+    case true:
         // If there are at least two valid posts detected  
         if ( (flag_position_post_1_ && flag_position_post_2_) ||
              (flag_position_post_1_ && flag_position_post_3_) ||
