@@ -52,9 +52,10 @@
   <build_depend>message_generation</build_depend>
   <depend>message_runtime</depend>
   <depend>roscpp</depend>
-  <!-- comprobar si estas dependencias se indican así -->
+
   <depend>boost</depend>
-  <depend>threads</depend> 
+  <!-- Check how to specify this dependency -->
+  <!-- <depend>threads</depend> -->
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

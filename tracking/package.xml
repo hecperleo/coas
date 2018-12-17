@@ -56,7 +56,7 @@
   <build_depend>geometry_msgs</build_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>tf2</build_depend>
-  <build_depend>eigen3</build_depend>
+  <build_depend>eigen</build_depend>
 
   <exec_depend>jsk_recognition_msgs</exec_depend>
   <exec_depend>roscpp</exec_depend>
@@ -65,7 +65,7 @@
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>visualization_msgs</exec_depend>
   <exec_depend>tf2</exec_depend>
-  <exec_depend>eigen3</exec_depend>
+  <exec_depend>eigen</exec_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
