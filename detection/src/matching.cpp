@@ -210,9 +210,9 @@ void Matching::runOnce()
     // Until it doesn't receive those, the flag stays down (false).
     // Once 3 positions are received "simultaneosly", the flag is raised (true),
     // and will stay raised until the end of the program.
-    switch (flag_matching_initialized_)
+    if (!flag_matching_initialized_)
     {
-    case false:
+        // flag_matching_initialized == false
         // It initializes the matching if there are three valid posts
         if (flag_position_post_1_ && flag_position_post_2_ && flag_position_post_3_)
         {
@@ -349,12 +349,14 @@ void Matching::runOnce()
             prev_positions_posts_.push_back(now_positions_posts_[matched_posts.at(1)]);
             prev_positions_posts_.push_back(now_positions_posts_[matched_posts.at(2)]);
 
-            counter_++;
+            flag_matching_initialized_ = true;
             start_time_pose_ = ros::Time::now().toSec();
             now_positions_posts_.clear();
         }
-        break;
-    case true:
+    }
+    else
+    {
+        // flag_matching_initialized == true
         // If there are at least two valid posts detected  
         if ( (flag_position_post_1_ && flag_position_post_2_) ||
              (flag_position_post_1_ && flag_position_post_3_) ||
@@ -535,7 +537,6 @@ void Matching::runOnce()
             // DEBUG
             //std::cout << "Not enough posts detected" << std::endl;
         }
-        break;
     }
     flag_position_post_1_ = false;
     flag_position_post_2_ = false;
