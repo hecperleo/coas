@@ -60,3 +60,6 @@ add_dependencies(matching ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_
 add_executable(matching_node src/matching_node.cpp)
 target_link_libraries(matching_node matching ${catkin_LIBRARIES})
 add_dependencies(matching_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+catkin_add_gtest(d2p tests/tests_d2p.cpp)
+target_link_libraries(d2p bounding_boxes ${catkin_LIBRARIES})

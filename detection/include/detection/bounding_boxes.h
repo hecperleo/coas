@@ -23,6 +23,9 @@ class BoundingBoxes
 public:
   BoundingBoxes();
   ~BoundingBoxes();
+  float calculateDistance2Points(float x1, float y1, float z1, float x2, float y2, float z2);
+  float calculateDistance2Points(const geometry_msgs::Point &point_1, 
+                                 const geometry_msgs::Point &point_2);
 
 private:
   // Callbacks
@@ -38,9 +41,6 @@ private:
   void checkPostDimension(float xDim, float yDim, float zDim);
   void checkDistancesBetweenPosts();
   void calculateMaxDistancesCluster(const pcl::PointCloud<pcl::PointXYZ> cluster);
-  float calculateDistance2Points(float x1, float y1, float z1, float x2, float y2, float z2);
-  float calculateDistance2Points(const geometry_msgs::Point &point_1, 
-                                 const geometry_msgs::Point &point_2);
   void saveDistances(bool b, nav_msgs::Path path1, nav_msgs::Path path2, nav_msgs::Path path3);
   void constructBoundingBoxes(float x, float y, float z, float dimX, float dimY, float dimZ, bool merge);
   nav_msgs::Path constructPath(std::vector<float> x, std::vector<float> y, std::vector<float> z, int length);
