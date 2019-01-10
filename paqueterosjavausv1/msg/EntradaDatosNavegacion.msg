@@ -1,0 +1,17 @@
+float64 fechaMensaje
+float64 Latitud
+float64 Longitud
+float64 UTMx
+float64 UTMy
+float64 ZonaUTM
+float32 Roll 
+float32 Pitch
+float32 Heading
+float32 COG
+float32 SOG
+float32 SOW
+float32 VelocityNorth
+float32 VelocityEast
+float32 VelocityX
+float32 VelocityY
+uint8 GPSINS_disponible
