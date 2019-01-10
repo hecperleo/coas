@@ -547,16 +547,6 @@ void BoundingBoxes::checkDistancesBetweenPosts()
                 post_reference_boxes_.boxes.push_back(post_candidates_boxes_.boxes.at(vec_post_candidates_boxes_indices.at(2)));
                 break;
         }
-        // Publish path to posts and path between posts
-        // in this way the rviz display is refreshed even
-        // when no information about a certain post is received
-        // so previuos data is not stuck for a long time in the screen
-        pub_path_post_1_.publish(path_post_1_);
-        pub_path_post_2_.publish(path_post_2_);
-        pub_path_post_3_.publish(path_post_3_);
-        pub_path_post_12_.publish(path_post_12_);
-        pub_path_post_13_.publish(path_post_13_);
-        pub_path_post_23_.publish(path_post_23_); 
 
         /// Send post positions in a single message
         /// This avoid mixing information from separate instants in time
@@ -591,7 +581,17 @@ void BoundingBoxes::checkDistancesBetweenPosts()
         {
             savePose(3, path_post_3_);
         }
-    }       
+    } 
+    // Publish path to posts and path between posts
+    // in this way the rviz display is refreshed even
+    // when no information about a certain post is received
+    // so previuos data is not stuck for a long time in the screen
+    pub_path_post_1_.publish(path_post_1_);
+    pub_path_post_2_.publish(path_post_2_);
+    pub_path_post_3_.publish(path_post_3_);
+    pub_path_post_12_.publish(path_post_12_);
+    pub_path_post_13_.publish(path_post_13_);
+    pub_path_post_23_.publish(path_post_23_);      
 }
 
 nav_msgs::Path BoundingBoxes::constructPath(std::vector<float> x, std::vector<float> y, std::vector<float> z, int length)
