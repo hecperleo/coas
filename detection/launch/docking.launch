@@ -1,6 +1,7 @@
 <launch>
     <!-- Docking: 1 | Harbor: 2 | Sea: 3 -->
     <node pkg="rostopic" type="rostopic" name="phase" args="pub /phase std_msgs/Int8 1"/>
+    <node pkg="tf2_ros" type="static_transform_publisher" name="map_velodyne_tf_broadcaster" args="0 0 0 0 0 0 map velodyne"/>
     
     <node pkg="filtering" type="sensor_filter_node" name="sensor_filter_node" output="screen" required="true">
         <!-- Params -->
