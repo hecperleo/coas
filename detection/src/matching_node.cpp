@@ -2,9 +2,12 @@
 
 int main(int argc, char **argv)
 {
+    int working_frequency;
     ros::init(argc, argv, "matching_node");
+    ros::NodeHandle pnh("~");
+    pnh.param<int>("working_frequency", working_frequency, 10);
     Matching match;
-    ros::Rate rate(5); // 5Hz //TODO: fine adjustment of the working frequency
+    ros::Rate rate(working_frequency); //TODO: fine adjustment of working frequency
     while(ros::ok())
     {
     	ros::spinOnce();

@@ -1,10 +1,12 @@
 <launch>
+    <arg name="working_frequency" default="10"/>
     <!-- Docking: 1 | Harbor: 2 | Sea: 3 -->
     <node pkg="rostopic" type="rostopic" name="phase" args="pub /phase std_msgs/Int8 3"/>
 	<node pkg="tf2_ros" type="static_transform_publisher" name="map_velodyne_tf_broadcaster" args="0 0 0 0 0 0 map velodyne"/>
     
     <node pkg="filtering" type="sensor_filter_node" name="sensor_filter_node" output="screen" required="true">
         <!-- Params -->
+        <param name="working_frequency" value="$(arg working_frequency)"/>
         <param name="frame_id" value="/velodyne" type="string"/>
         <param name="use_voxel_filter" value="true" type="bool"/>
         <!-- Subscribers -->
@@ -16,6 +18,7 @@
     </node>
     <node pkg="detection" type="bounding_boxes_node" name="bounding_boxes_node" output="screen" required="true">
         <!-- Params -->
+        <param name="working_frequency" value="$(arg working_frequency)"/>
         <param name="frame_id" value="/velodyne" type="string"/>
         <!-- Subscribers -->
         <remap from="filter_points" to="/filter_points"/>
