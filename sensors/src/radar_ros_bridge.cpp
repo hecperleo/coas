@@ -3,11 +3,26 @@
 /**
 * RadarRosBridge constructor
 */
-RadarRosBridge::RadarRosBridge(const uint16_t &heartbeatListeningPort, const uint16_t &trackReportListeningPort):
-_nodeHandle(),
-_heartbeatSocket(_io_service, boostUdp::endpoint(boostUdp::v4(), heartbeatListeningPort)),
-_trackReportSocket(_io_service, boostUdp::endpoint(boostUdp::v4(), trackReportListeningPort))
+RadarRosBridge::RadarRosBridge(const uint16_t &heartbeat_listening_port, const uint16_t &track_report_listening_port):
+_node_handle(),
+_private_node_handle("~"),
+_heartbeat_socket(_io_service, boostUdp::endpoint(boostUdp::v4(), heartbeat_listening_port)),
+_track_report_socket(_io_service, boostUdp::endpoint(boostUdp::v4(), track_report_listening_port))
 {
+	_save_raw_binary_msg_data = false;
+	_private_node_handle.getParam("save_raw_binary_msg_data", _save_raw_binary_msg_data);
+	_private_node_handle.getParam("raw_radar_msg_data_filename", _raw_radar_msg_data_filename);
+	if(_save_raw_binary_msg_data)
+	{
+		auto t = std::time(nullptr);
+		auto tm = *std::localtime(&t);
+		std::ostringstream oss;
+		oss << std::put_time(&tm, "%Y-%m-%d-%H-%M-%S");
+		_file_raw_heartbeat_msg_data.open(_raw_radar_msg_data_filename + "_heartbeat"+"_"+oss.str()+".bin", 
+										  std::ios_base::out|std::ios_base::binary);
+		_file_raw_trackreport_msg_data.open(_raw_radar_msg_data_filename + "_track_report"+"_"+oss.str()+".bin", 
+											std::ios_base::out|std::ios_base::binary);
+	}
 }
 
 /**
@@ -15,7 +30,6 @@ _trackReportSocket(_io_service, boostUdp::endpoint(boostUdp::v4(), trackReportLi
 */
 RadarRosBridge::~RadarRosBridge()
 {
-
 }
 
 void RadarRosBridge::udp_handle_receive_heartbeat(const boost::system::error_code& error,
@@ -25,70 +39,78 @@ void RadarRosBridge::udp_handle_receive_heartbeat(const boost::system::error_cod
 	{
 		ROS_INFO("Heartbeat Message Received");
 
-		uint32_t msgIdentifier = (uint32_t)_heartbeatRecvBuf[3] << 24  |
-      				  			 (uint32_t)_heartbeatRecvBuf[2] << 16 |
-      				  			 (uint32_t)_heartbeatRecvBuf[1] << 8  |
-      				  			 (uint32_t)_heartbeatRecvBuf[0];
+		uint32_t msg_identifier = (uint32_t)_heartbeat_recv_buf[3] << 24  |
+      				  			  (uint32_t)_heartbeat_recv_buf[2] << 16 |
+      				  			  (uint32_t)_heartbeat_recv_buf[1] << 8  |
+      				  			  (uint32_t)_heartbeat_recv_buf[0];
 
       	float aux_float = 0;
+		// Save raw binary data
+		if(_save_raw_binary_msg_data)
+		{
+			std::memcpy(_aux_buffer_heartbeat, _heartbeat_recv_buf.data(), num_bytes);
+			_file_raw_heartbeat_msg_data.write((const char*)&num_bytes, sizeof(std::size_t));
+			_file_raw_heartbeat_msg_data.write(_aux_buffer_heartbeat, num_bytes);
+		}
+		
       	// Heartbeat message
-      	if ( (msgIdentifier == 0x01AB0101) && (num_bytes == Heartbeat::UDPMSGSIZE) )  
+      	if(msg_identifier == 0x01AB0101)
       	{
 			/*
 			//std::cout.write(_recv_buf.data(), len);
-			//std::cout << "Something is received" << std::endl;
-			// Si recibimos los datos en formato big-endian
+			//std::cout << "Something is received" << std::endl; 
 			/*
+			// If data is received in big-endian format
 			num = (uint32_t)buffer[0] << 24 |
       		  	(uint32_t)buffer[1] << 16 |
       	  		(uint32_t)buffer[2] << 8  |
       	  		(uint32_t)buffer[3];
-    		// Si recibimos los datos en formato little-endian
+    		// If data is received in little-endian format
 			num = (uint32_t)buffer[3] << 24 |
       		  		(uint32_t)buffer[2] << 16 |
       		  		(uint32_t)buffer[1] << 8  |
       	  	  		(uint32_t)buffer[0];
 			*/
-      		_heartbeatMsg.msgIdentifier = msgIdentifier;
-    		char serverName[Heartbeat::SERVERNAMESIZE];
+      		_heartbeat_msg.msg_identifier = msg_identifier;
+    		char server_name[Heartbeat::SERVERNAMESIZE];
     		for(int i=0; i<Heartbeat::SERVERNAMESIZE; i++) {
-      			serverName[i] = _heartbeatRecvBuf[Heartbeat::SERVERNAMEPOS+i]; 
+      			server_name[i] = _heartbeat_recv_buf[Heartbeat::SERVERNAMEPOS+i]; 
     		}
-			_heartbeatMsg.serverName = std::string(serverName);
-			_heartbeatMsg.commandPort = (uint16_t)_heartbeatRecvBuf[Heartbeat::CMDPORTPOS+1] << 8 |
-								   		(uint16_t)_heartbeatRecvBuf[Heartbeat::CMDPORTPOS];
-			_heartbeatMsg.commandConnected = (uint8_t)_heartbeatRecvBuf[Heartbeat::CMDCONNECTEDPOS];
-			_heartbeatMsg.commandListen = (uint8_t)_heartbeatRecvBuf[Heartbeat::CMDLISTENPOS];
-			std::memcpy (&aux_float, _heartbeatRecvBuf.data() + Heartbeat::RAWDISTTPUTPOS, FLOATSIZE);
-			_heartbeatMsg.rawDistributionThroughput = aux_float;
-			std::memcpy (&aux_float, _heartbeatRecvBuf.data() + Heartbeat::PRODISTTPUTPOS, FLOATSIZE);
-			_heartbeatMsg.proDistributionThroughput = aux_float;
-			std::memcpy (&aux_float, _heartbeatRecvBuf.data() + Heartbeat::RAWRECTPUTPOS, FLOATSIZE);
-			_heartbeatMsg.rawRecordingThroughput = aux_float;
-			_heartbeatMsg.sourceStarted = (uint8_t)_heartbeatRecvBuf[Heartbeat::SRCSTARTEDPOS];
-			_heartbeatMsg.bufferFull = (uint8_t)_heartbeatRecvBuf[Heartbeat::BUFFERFULLPOS];
-			_heartbeatMsg.cpuLoad = (uint16_t)_heartbeatRecvBuf[Heartbeat::CPULOADPOS+1] << 8 |
-								    (uint16_t)_heartbeatRecvBuf[Heartbeat::CPULOADPOS];
-			_heartbeatMsg.currentSourcePeriod = (uint16_t)_heartbeatRecvBuf[Heartbeat::CURRENTSRCPERIODPOS+1] << 8 |
-								   			    (uint16_t)_heartbeatRecvBuf[Heartbeat::CURRENTSRCPERIODPOS];
-			_heartbeatMsg.nScans = (uint32_t)_heartbeatRecvBuf[Heartbeat::NSCANSPOS+3] << 24  |
-      				  			   (uint32_t)_heartbeatRecvBuf[Heartbeat::NSCANSPOS+2] << 16 |
-      				  			   (uint32_t)_heartbeatRecvBuf[Heartbeat::NSCANSPOS+1] << 8  |
-      				  			   (uint32_t)_heartbeatRecvBuf[Heartbeat::NSCANSPOS];
-			_heartbeatMsg.navDataPresent = (uint8_t)_heartbeatRecvBuf[Heartbeat::NAVDATAPRESENTPOS];
-			// std::memcpy ( destino, origen, tamaño)
-      		std::memcpy (&aux_float, _heartbeatRecvBuf.data() + Heartbeat::LATITUDEPOS, FLOATSIZE);
-      		_heartbeatMsg.latitude = aux_float;
-      		std::memcpy (&aux_float, _heartbeatRecvBuf.data() + Heartbeat::LONGITUDEPOS, FLOATSIZE);
-			_heartbeatMsg.longitude = aux_float;
+			_heartbeat_msg.server_name = std::string(server_name);
+			_heartbeat_msg.command_port = (uint16_t)_heartbeat_recv_buf[Heartbeat::CMDPORTPOS+1] << 8 |
+								   		  (uint16_t)_heartbeat_recv_buf[Heartbeat::CMDPORTPOS];
+			_heartbeat_msg.command_connected = (uint8_t)_heartbeat_recv_buf[Heartbeat::CMDCONNECTEDPOS];
+			_heartbeat_msg.command_listen = (uint8_t)_heartbeat_recv_buf[Heartbeat::CMDLISTENPOS];
+			std::memcpy (&aux_float, _heartbeat_recv_buf.data() + Heartbeat::RAWDISTTPUTPOS, FLOATSIZE);
+			_heartbeat_msg.raw_distribution_throughput = aux_float;
+			std::memcpy (&aux_float, _heartbeat_recv_buf.data() + Heartbeat::PRODISTTPUTPOS, FLOATSIZE);
+			_heartbeat_msg.pro_distribution_throughput = aux_float;
+			std::memcpy (&aux_float, _heartbeat_recv_buf.data() + Heartbeat::RAWRECTPUTPOS, FLOATSIZE);
+			_heartbeat_msg.raw_recording_throughput = aux_float;
+			_heartbeat_msg.source_started = (uint8_t)_heartbeat_recv_buf[Heartbeat::SRCSTARTEDPOS];
+			_heartbeat_msg.buffer_full = (uint8_t)_heartbeat_recv_buf[Heartbeat::BUFFERFULLPOS];
+			_heartbeat_msg.cpu_load = (uint16_t)_heartbeat_recv_buf[Heartbeat::CPULOADPOS+1] << 8 |
+								      (uint16_t)_heartbeat_recv_buf[Heartbeat::CPULOADPOS];
+			_heartbeat_msg.current_source_period = (uint16_t)_heartbeat_recv_buf[Heartbeat::CURRENTSRCPERIODPOS+1] << 8 |
+								   			       (uint16_t)_heartbeat_recv_buf[Heartbeat::CURRENTSRCPERIODPOS];
+			_heartbeat_msg.n_scans = (uint32_t)_heartbeat_recv_buf[Heartbeat::NSCANSPOS+3] << 24  |
+      				  			     (uint32_t)_heartbeat_recv_buf[Heartbeat::NSCANSPOS+2] << 16 |
+      				  			     (uint32_t)_heartbeat_recv_buf[Heartbeat::NSCANSPOS+1] << 8  |
+      				  			     (uint32_t)_heartbeat_recv_buf[Heartbeat::NSCANSPOS];
+			_heartbeat_msg.nav_data_present = (uint8_t)_heartbeat_recv_buf[Heartbeat::NAVDATAPRESENTPOS];
+			// std::memcpy(destination, source, size)
+      		std::memcpy (&aux_float, _heartbeat_recv_buf.data() + Heartbeat::LATITUDEPOS, FLOATSIZE);
+      		_heartbeat_msg.latitude = aux_float;
+      		std::memcpy (&aux_float, _heartbeat_recv_buf.data() + Heartbeat::LONGITUDEPOS, FLOATSIZE);
+			_heartbeat_msg.longitude = aux_float;
 
-			_heartBeatPublisher.publish(_heartbeatMsg);
+			_heartbeat_publisher.publish(_heartbeat_msg);
       	} else {
       		ROS_WARN("Incorrect Heartbeat Message Reception");
       	}
     }
-	_heartbeatSocket.async_receive_from(
-			boost::asio::buffer(_heartbeatRecvBuf), _server_endpoint,
+	_heartbeat_socket.async_receive_from(
+			boost::asio::buffer(_heartbeat_recv_buf), _server_endpoint,
 			boost::bind(&RadarRosBridge::udp_handle_receive_heartbeat, this,
 						boost::asio::placeholders::error,
 						boost::asio::placeholders::bytes_transferred));
@@ -99,42 +121,49 @@ void RadarRosBridge::udp_handle_receive_trackreport(const boost::system::error_c
 {
 	if (!error)
 	{
-		uint32_t msgIdentifier = (uint32_t)_trackReportRecvBuf[3] << 24  |
-      				  			 (uint32_t)_trackReportRecvBuf[2] << 16 |
-      				  			 (uint32_t)_trackReportRecvBuf[1] << 8  |
-      				  			 (uint32_t)_trackReportRecvBuf[0];
+		uint32_t msg_identifier = (uint32_t)_track_report_recv_buf[3] << 24  |
+      				  			  (uint32_t)_track_report_recv_buf[2] << 16 |
+      				  			  (uint32_t)_track_report_recv_buf[1] << 8  |
+      				  			  (uint32_t)_track_report_recv_buf[0];
 
-      	if ( (msgIdentifier == 0x01AD0101) && (num_bytes == BasicTrackReport::UDPMSGSIZE) )
+		// Save raw binary data
+		if(_save_raw_binary_msg_data)
+		{
+			std::memcpy(_aux_buffer_trackreport, _track_report_recv_buf.data(), num_bytes);
+			_file_raw_trackreport_msg_data.write((const char*)&num_bytes, sizeof(std::size_t));
+			_file_raw_trackreport_msg_data.write(_aux_buffer_trackreport, num_bytes);
+		}
+      	if(msg_identifier == 0x01AD0101)
       	{
       		// Basic track report
       		ROS_INFO_STREAM("Basic Track Report Received with size: " << num_bytes);
-      		_basicTrackReportMsg.msgIdentifier = msgIdentifier;
+      		_basic_track_report_msg.msg_identifier = msg_identifier;
       		this->basicTrackReportMsgToROS();
-      		_basicTrackReportPublisher.publish(_basicTrackReportMsg);
+      		_basic_track_report_publisher.publish(_basic_track_report_msg);
 		} 
-		else if ( (msgIdentifier == 0x01AD0201) && (num_bytes == NormalTrackReport::UDPMSGSIZE) ) 
+		else if(msg_identifier == 0x01AD0201)
 		{
 			// Normal track report
 			ROS_INFO_STREAM("Normal Track Report Received with size: " << num_bytes);
-			_normalTrackReportMsg.basicMsg.msgIdentifier = msgIdentifier;
+			_normal_track_report_msg.basic_msg.msg_identifier = msg_identifier;
 			this->normalTrackReportMsgToROS();
-			_normalTrackReportPublisher.publish(_normalTrackReportMsg);
+			_normal_track_report_publisher.publish(_normal_track_report_msg);
 		} 
-		else if ( (msgIdentifier == 0x01AD0301) && (num_bytes == ExtendedTrackReport::UDPMSGSIZE) )
+		else if(msg_identifier == 0x01AD0301)
 		{
 			// Extended track report
 			ROS_INFO_STREAM("Extended Track Report Received with size: " << num_bytes);
-			_extendedTrackReportMsg.normalMsg.basicMsg.msgIdentifier = msgIdentifier;
+			_extended_track_report_msg.normal_msg.basic_msg.msg_identifier = msg_identifier;
 			this->extendedTrackReportMsgToROS();
-			_extendedTrackReportPublisher.publish(_extendedTrackReportMsg);
+			_extended_track_report_publisher.publish(_extended_track_report_msg);
 		} 
 		else 
 		{
 			ROS_WARN("Incorrect Track Report Reception");
 		}
 
-		_trackReportSocket.async_receive_from(
-				boost::asio::buffer(_trackReportRecvBuf), _server_endpoint,
+		_track_report_socket.async_receive_from(
+				boost::asio::buffer(_track_report_recv_buf), _server_endpoint,
 				boost::bind(&RadarRosBridge::udp_handle_receive_trackreport, this,
 				boost::asio::placeholders::error,
 				boost::asio::placeholders::bytes_transferred));
@@ -144,41 +173,41 @@ void RadarRosBridge::udp_handle_receive_trackreport(const boost::system::error_c
 void RadarRosBridge::basicTrackReportMsgToROS()
 {
 	float aux_float = 0;
-    _basicTrackReportMsg.trackID = (uint32_t)_trackReportRecvBuf[BasicTrackReport::TRACKIDPOS+1] << 8  |
-      				  		 	   (uint32_t)_trackReportRecvBuf[BasicTrackReport::TRACKIDPOS];
-    _basicTrackReportMsg.eStatus = (uint8_t)_trackReportRecvBuf[BasicTrackReport::ESTATUSPOS];
-    _basicTrackReportMsg.nHits = (uint16_t)_trackReportRecvBuf[BasicTrackReport::NHITSPOS+1] << 8 |
-    					   		 (uint16_t)_trackReportRecvBuf[BasicTrackReport::NHITSPOS];
-    _basicTrackReportMsg.nRuns = (uint16_t)_trackReportRecvBuf[BasicTrackReport::NRUNSPOS+1] << 8 |
-    					   		 (uint16_t)_trackReportRecvBuf[BasicTrackReport::NRUNSPOS];					   
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + BasicTrackReport::ESTXPOS, FLOATSIZE);
-    _basicTrackReportMsg.estX = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + BasicTrackReport::ESTYPOS, FLOATSIZE);
-    _basicTrackReportMsg.estY = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + BasicTrackReport::ESTAZIPOS, FLOATSIZE);
-    _basicTrackReportMsg.estAzi = aux_float;  
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + BasicTrackReport::ESTRANGEPOS, FLOATSIZE);
-    _basicTrackReportMsg.estRange = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + BasicTrackReport::ESTSPEEDPOS, FLOATSIZE);
-    _basicTrackReportMsg.estSpeed = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + BasicTrackReport::ESTCOURSEPOS, FLOATSIZE);
-    _basicTrackReportMsg.estCourse = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + BasicTrackReport::ESTLATPOS, FLOATSIZE);
-    _basicTrackReportMsg.estLat = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + BasicTrackReport::ESTLONPOS, FLOATSIZE);
-    _basicTrackReportMsg.estLon = aux_float;
-    _basicTrackReportMsg.timeStamp = (uint64_t)_trackReportRecvBuf[BasicTrackReport::TIMESTAMPLSBPOS+7] << 56 |
-    						  		 (uint64_t)_trackReportRecvBuf[BasicTrackReport::TIMESTAMPLSBPOS+6] << 48 |
-    						  		 (uint64_t)_trackReportRecvBuf[BasicTrackReport::TIMESTAMPLSBPOS+5] << 40 |
-    						  		 (uint64_t)_trackReportRecvBuf[BasicTrackReport::TIMESTAMPLSBPOS+4] << 32 |
-    						  		 (uint64_t)_trackReportRecvBuf[BasicTrackReport::TIMESTAMPLSBPOS+3] << 24 |
-    						  		 (uint64_t)_trackReportRecvBuf[BasicTrackReport::TIMESTAMPLSBPOS+2] << 16 |
-    						  		 (uint64_t)_trackReportRecvBuf[BasicTrackReport::TIMESTAMPLSBPOS+1] << 8 |
-    						  		 (uint64_t)_trackReportRecvBuf[BasicTrackReport::TIMESTAMPLSBPOS];
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + BasicTrackReport::MEARANGESIZEPOS, FLOATSIZE);
-    _basicTrackReportMsg.meaRangeSize = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + BasicTrackReport::MEAAZISIZEPOS, FLOATSIZE);
-    _basicTrackReportMsg.meaAzimuthSize = aux_float;
+    _basic_track_report_msg.track_id = (uint32_t)_track_report_recv_buf[BasicTrackReport::TRACKIDPOS+1] << 8  |
+      				  		 		   (uint32_t)_track_report_recv_buf[BasicTrackReport::TRACKIDPOS];
+    _basic_track_report_msg.e_status = (uint8_t)_track_report_recv_buf[BasicTrackReport::ESTATUSPOS];
+    _basic_track_report_msg.n_hits = (uint16_t)_track_report_recv_buf[BasicTrackReport::NHITSPOS+1] << 8 |
+    					   		 	 (uint16_t)_track_report_recv_buf[BasicTrackReport::NHITSPOS];
+    _basic_track_report_msg.n_runs = (uint16_t)_track_report_recv_buf[BasicTrackReport::NRUNSPOS+1] << 8 |
+    					   		 	 (uint16_t)_track_report_recv_buf[BasicTrackReport::NRUNSPOS];					   
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + BasicTrackReport::ESTXPOS, FLOATSIZE);
+    _basic_track_report_msg.estimated_x = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + BasicTrackReport::ESTYPOS, FLOATSIZE);
+    _basic_track_report_msg.estimated_y = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + BasicTrackReport::ESTAZIPOS, FLOATSIZE);
+    _basic_track_report_msg.estimated_azi = aux_float;  
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + BasicTrackReport::ESTRANGEPOS, FLOATSIZE);
+    _basic_track_report_msg.estimated_range = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + BasicTrackReport::ESTSPEEDPOS, FLOATSIZE);
+    _basic_track_report_msg.estimated_speed = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + BasicTrackReport::ESTCOURSEPOS, FLOATSIZE);
+    _basic_track_report_msg.estimated_course = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + BasicTrackReport::ESTLATPOS, FLOATSIZE);
+    _basic_track_report_msg.estimated_lat = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + BasicTrackReport::ESTLONPOS, FLOATSIZE);
+    _basic_track_report_msg.estimated_lon = aux_float;
+    _basic_track_report_msg.time_stamp = (uint64_t)_track_report_recv_buf[BasicTrackReport::TIMESTAMPLSBPOS+7] << 56 |
+    						  		 	 (uint64_t)_track_report_recv_buf[BasicTrackReport::TIMESTAMPLSBPOS+6] << 48 |
+    						  		 	 (uint64_t)_track_report_recv_buf[BasicTrackReport::TIMESTAMPLSBPOS+5] << 40 |
+    						  		 	 (uint64_t)_track_report_recv_buf[BasicTrackReport::TIMESTAMPLSBPOS+4] << 32 |
+    						  		 	 (uint64_t)_track_report_recv_buf[BasicTrackReport::TIMESTAMPLSBPOS+3] << 24 |
+    						  		 	 (uint64_t)_track_report_recv_buf[BasicTrackReport::TIMESTAMPLSBPOS+2] << 16 |
+    						  		 	 (uint64_t)_track_report_recv_buf[BasicTrackReport::TIMESTAMPLSBPOS+1] << 8 |
+    						  		 	 (uint64_t)_track_report_recv_buf[BasicTrackReport::TIMESTAMPLSBPOS];
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + BasicTrackReport::MEARANGESIZEPOS, FLOATSIZE);
+    _basic_track_report_msg.measured_range_size = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + BasicTrackReport::MEAAZISIZEPOS, FLOATSIZE);
+    _basic_track_report_msg.measured_azimuth_size = aux_float;
 }
 
 void RadarRosBridge::normalTrackReportMsgToROS()
@@ -186,38 +215,38 @@ void RadarRosBridge::normalTrackReportMsgToROS()
 	float aux_float = 0;
 	// Convert basic part of the message
 	this->basicTrackReportMsgToROS();
-	_normalTrackReportMsg.basicMsg = _basicTrackReportMsg;
+	_normal_track_report_msg.basic_msg = _basic_track_report_msg;
 	// Then add fields of normal track report
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + NormalTrackReport::MEAXPOS, FLOATSIZE);
-    _normalTrackReportMsg.meaX = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + NormalTrackReport::MEAYPOS, FLOATSIZE);
-    _normalTrackReportMsg.meaY = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + NormalTrackReport::MEAAZIPOS, FLOATSIZE);
-    _normalTrackReportMsg.meaAzi = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + NormalTrackReport::MEARANGEPOS, FLOATSIZE);
-    _normalTrackReportMsg.meaRange = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + NormalTrackReport::MEASPEEDPOS, FLOATSIZE);
-    _normalTrackReportMsg.meaSpeed = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + NormalTrackReport::MEACOURSEPOS, FLOATSIZE);
-    _normalTrackReportMsg.meaCourse = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + NormalTrackReport::PREXPOS, FLOATSIZE);
-    _normalTrackReportMsg.preX = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + NormalTrackReport::PREYPOS, FLOATSIZE);
-    _normalTrackReportMsg.preY = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + NormalTrackReport::PRERANGEPOS, FLOATSIZE);
-    _normalTrackReportMsg.preRange = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + NormalTrackReport::PRESPEEDPOS, FLOATSIZE);
-    _normalTrackReportMsg.preSpeed = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + NormalTrackReport::PRECOURSEPOS, FLOATSIZE);
-    _normalTrackReportMsg.preCourse = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + NormalTrackReport::SCOREPOS, FLOATSIZE);
-    _normalTrackReportMsg.score = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + NormalTrackReport::WEIGHTPOS, FLOATSIZE);
-    _normalTrackReportMsg.weight = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + NormalTrackReport::STRENGTHPOS, FLOATSIZE);
-    _normalTrackReportMsg.strength = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + NormalTrackReport::DENSITYPOS, FLOATSIZE);
-    _normalTrackReportMsg.density = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + NormalTrackReport::MEAXPOS, FLOATSIZE);
+    _normal_track_report_msg.measured_x = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + NormalTrackReport::MEAYPOS, FLOATSIZE);
+    _normal_track_report_msg.measured_y = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + NormalTrackReport::MEAAZIPOS, FLOATSIZE);
+    _normal_track_report_msg.measured_azi = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + NormalTrackReport::MEARANGEPOS, FLOATSIZE);
+    _normal_track_report_msg.measured_range = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + NormalTrackReport::MEASPEEDPOS, FLOATSIZE);
+    _normal_track_report_msg.measured_speed = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + NormalTrackReport::MEACOURSEPOS, FLOATSIZE);
+    _normal_track_report_msg.measured_course = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + NormalTrackReport::PREXPOS, FLOATSIZE);
+    _normal_track_report_msg.predicted_x = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + NormalTrackReport::PREYPOS, FLOATSIZE);
+    _normal_track_report_msg.predicted_y = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + NormalTrackReport::PRERANGEPOS, FLOATSIZE);
+    _normal_track_report_msg.predicted_range = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + NormalTrackReport::PRESPEEDPOS, FLOATSIZE);
+    _normal_track_report_msg.predicted_speed = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + NormalTrackReport::PRECOURSEPOS, FLOATSIZE);
+    _normal_track_report_msg.predicted_course = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + NormalTrackReport::SCOREPOS, FLOATSIZE);
+    _normal_track_report_msg.score = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + NormalTrackReport::WEIGHTPOS, FLOATSIZE);
+    _normal_track_report_msg.weight = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + NormalTrackReport::STRENGTHPOS, FLOATSIZE);
+    _normal_track_report_msg.strength = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + NormalTrackReport::DENSITYPOS, FLOATSIZE);
+    _normal_track_report_msg.density = aux_float;
 }
 
 void RadarRosBridge::extendedTrackReportMsgToROS()
@@ -225,55 +254,54 @@ void RadarRosBridge::extendedTrackReportMsgToROS()
 	float aux_float = 0;
 	// Convert normal part of the message
 	this->normalTrackReportMsgToROS();
-	_extendedTrackReportMsg.normalMsg = _normalTrackReportMsg;
+	_extended_track_report_msg.normal_msg = _normal_track_report_msg;
 	// Then add fields of extended track report
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + ExtendedTrackReport::GAINXPOS, FLOATSIZE);
-    _extendedTrackReportMsg.gainX = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + ExtendedTrackReport::GAINYPOS, FLOATSIZE);
-    _extendedTrackReportMsg.gainY = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + ExtendedTrackReport::GAINVXPOS, FLOATSIZE);
-    _extendedTrackReportMsg.gainVX = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + ExtendedTrackReport::GAINVYPOS, FLOATSIZE);
-    _extendedTrackReportMsg.gainVY = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + ExtendedTrackReport::INNOERRXPOS, FLOATSIZE);
-    _extendedTrackReportMsg.innoErrorX = aux_float;
-    std::memcpy (&aux_float, _trackReportRecvBuf.data() + ExtendedTrackReport::INNOERRYPOS, FLOATSIZE);
-    _extendedTrackReportMsg.innoErrorY = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + ExtendedTrackReport::GAINXPOS, FLOATSIZE);
+    _extended_track_report_msg.gain_x = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + ExtendedTrackReport::GAINYPOS, FLOATSIZE);
+    _extended_track_report_msg.gain_y = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + ExtendedTrackReport::GAINVXPOS, FLOATSIZE);
+    _extended_track_report_msg.gain_vx = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + ExtendedTrackReport::GAINVYPOS, FLOATSIZE);
+    _extended_track_report_msg.gain_vy = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + ExtendedTrackReport::INNOERRXPOS, FLOATSIZE);
+    _extended_track_report_msg.innovation_error_x = aux_float;
+    std::memcpy (&aux_float, _track_report_recv_buf.data() + ExtendedTrackReport::INNOERRYPOS, FLOATSIZE);
+    _extended_track_report_msg.innovation_error_y = aux_float;
 }
 
 void RadarRosBridge::main()
 {
-	_heartBeatPublisher = _nodeHandle.advertise<sensors::RadarHeartbeat>("heartbeat", 10);
-	_basicTrackReportPublisher = _nodeHandle.advertise<sensors::RadarBasicTrackReport>("basic_track_report", 10);
-	_normalTrackReportPublisher = _nodeHandle.advertise<sensors::RadarNormalTrackReport>("normal_track_report", 10);
-	_extendedTrackReportPublisher = _nodeHandle.advertise<sensors::RadarExtendedTrackReport>("extended_track_report", 10);
+	_heartbeat_publisher = _node_handle.advertise<sensors::RadarHeartbeat>("heartbeat", 10);
+	_basic_track_report_publisher = _node_handle.advertise<sensors::RadarBasicTrackReport>("basic_track_report", 10);
+	_normal_track_report_publisher = _node_handle.advertise<sensors::RadarNormalTrackReport>("normal_track_report", 10);
+	_extended_track_report_publisher = _node_handle.advertise<sensors::RadarExtendedTrackReport>("extended_track_report", 10);
 	//ros::Duration(1).sleep();
 	try
 	{
 		//boostUdp::resolver resolver(_io_service);
-		// A la consulta se le pasan los siguientes argumentos
-		// 1º Protocolo a usar, en este caso UDP/IPv4
-		// 2º El nombre del servidor (FQDN)
-		// 3º El servicio (o puerto) al que se pretende acceder (ver Lista de puertos TCP y UDP en wikipedia)
-		//boostUdp::resolver::query query(boostUdp::v4(), "localhost", "1234");
-		//_server_endpoint = *resolver.resolve(query);
+		// Query can accept the following parameters
+		// 1º Protocol to use, in this case UDP/IPv4
+		// 2º Server name (FQDN)
+		// 3º Service (or port) you want to access (see UDP and TCP ports list on wikipedia)
+		// boostUdp::resolver::query query(boostUdp::v4(), "localhost", "1234");
+		// _server_endpoint = *resolver.resolve(query);
 
-		// Imprimir la dirección IP del endpoint
-		//std::cout << "dirección IP del servidor " << _server_endpoint.address() << std::endl;
+		// Print endpoint IP address
+		//std::cout << "server IP address" << _server_endpoint.address() << std::endl;
 
 		//boostUdp::socket socket(_io_service);
 		//_socket.open(boostUdp::v4());
-
 		//_send_buf[0] = 42;
 		//_socket.send_to(boost::asio::buffer(_send_buf), _server_endpoint);
 
-		_heartbeatSocket.async_receive_from(
-			boost::asio::buffer(_heartbeatRecvBuf), _server_endpoint,
+		_heartbeat_socket.async_receive_from(
+			boost::asio::buffer(_heartbeat_recv_buf), _server_endpoint,
 			boost::bind(&RadarRosBridge::udp_handle_receive_heartbeat, this,
 						boost::asio::placeholders::error,
 						boost::asio::placeholders::bytes_transferred));
-		_trackReportSocket.async_receive_from(
-			boost::asio::buffer(_trackReportRecvBuf), _server_endpoint,
+		_track_report_socket.async_receive_from(
+			boost::asio::buffer(_track_report_recv_buf), _server_endpoint,
 			boost::bind(&RadarRosBridge::udp_handle_receive_trackreport, this,
 						boost::asio::placeholders::error,
 						boost::asio::placeholders::bytes_transferred));
@@ -285,23 +313,22 @@ void RadarRosBridge::main()
 	}
 	while (ros::ok())
 	{
-		_io_service.poll_one();
-		//_socket.send_to(boost::asio::buffer(_send_buf), _server_endpoint);
+		//_io_service.poll_one();
+		_io_service.poll(); // Execute all ready handlers, then continue
 		ros::Duration(0.05).sleep();
 	}
 }
 
-
 int main(int argc, char** argv) {
 	ros::init(argc, argv, "radar_ros_bridge");
-	ros::NodeHandle privateNodeHandle("~");
+	ros::NodeHandle pnh("~");
 	// Get parameters
-	int heartbeatListeningPort = HBLSTPORT;		
-	privateNodeHandle.getParam("heartbeat_listening_port", heartbeatListeningPort);
-	int trackReportListeningPort = TRLSTPORT;
-	privateNodeHandle.getParam("track_report_listening_port", trackReportListeningPort);
+	int heartbeat_listening_port = HBLSTPORT;		
+	pnh.getParam("heartbeat_listening_port", heartbeat_listening_port);
+	int track_report_listening_port = TRLSTPORT;
+	pnh.getParam("track_report_listening_port", track_report_listening_port);
 	//***************
-	RadarRosBridge radar_ros_bridge(heartbeatListeningPort, trackReportListeningPort);
+	RadarRosBridge radar_ros_bridge(heartbeat_listening_port, track_report_listening_port);
 	radar_ros_bridge.main();
 	return 0;
 }

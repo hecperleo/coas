@@ -19,48 +19,48 @@ uint8 MEARANGESIZEPOS=56
 uint8 MEAAZISIZEPOS=60
 
 ##### FIELDS #####
-uint32 msgIdentifier
+uint32 msg_identifier
 
-uint32 trackID
+uint32 track_id
 
 # Track status
-uint8 eStatus
+uint8 e_status
 
 # Track detections counter
-uint16 nHits 
+uint16 n_hits 
 
 # Antenna scan counter. Number of antenna scans from track creation
-uint16 nRuns
+uint16 n_runs
 
 # Estimated x distance from radar (meters)
-float32 estX
+float32 estimated_x
 
 # Estimated y distance from radar (meters)
-float32 estY
+float32 estimated_y
 
 # Estimated azimuth relative to radar [0-360] degrees
-float32 estAzi
+float32 estimated_azi
 
 # Estimated range to radars (meters)
-float32 estRange
+float32 estimated_range
 
 # Estimated absolute speed (meters per second)
-float32 estSpeed
+float32 estimated_speed
 
 # Estimated absolute course (meters)
-float32 estCourse
+float32 estimated_course
 
 # Estimated latitude (degrees)
-float32 estLat
+float32 estimated_lat
 
 # Estimated longitude (degrees)
-float32 estLon
+float32 estimated_lon
 
 # Detection time in ms
-uint64 timeStamp
+uint64 time_stamp
 
 # Measured size in slant range
-float32 meaRangeSize
+float32 measured_range_size
 
 # Measured size in azimuth
-float32 meaAzimuthSize
+float32 measured_azimuth_size

@@ -2,6 +2,10 @@
 #define RADAR_ROS_BRIDGE_H
 
 #include <iostream>
+#include <iomanip>
+#include <ctime>
+#include <fstream>
+#include <sstream>
 #include <boost/array.hpp>
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
@@ -21,16 +25,15 @@ typedef sensors::RadarNormalTrackReport NormalTrackReport;
 typedef sensors::RadarExtendedTrackReport ExtendedTrackReport;
 
 // Default listening ports
-#define HBLSTPORT 6500 // Heartbeat
-#define TRLSTPORT 6501 // Track Report
-//#define BASICTRACKREPORTSIZE 76 // bytes
-//#define NORMALTRACKREPORTSIZE 152 // bytes
-//#define EXTENDEDTRACKREPORTSIZE 188 // bytes
+#define HBLSTPORT 6500 // default heartbeat listening port
+#define TRLSTPORT 6501 // default track report
+#define HEARTBEATBUFFERSIZE 100
+#define TRACKREPORTBUFFERSIZE 500
 #define FLOATSIZE 4
 
 class RadarRosBridge {
 public:
-	RadarRosBridge(const uint16_t &heartbeatListeningPort, const uint16_t &trackReportListeningPort);
+	RadarRosBridge(const uint16_t &heartbeat_listening_port, const uint16_t &track_report_listening_port);
 	~RadarRosBridge();
 	void main();
 private:
@@ -42,27 +45,32 @@ private:
 	void normalTrackReportMsgToROS();
 	void extendedTrackReportMsgToROS();
 
+	ros::NodeHandle _node_handle;
+	ros::NodeHandle _private_node_handle;
+	ros::Publisher	_heartbeat_publisher;
+	ros::Publisher  _basic_track_report_publisher;
+	ros::Publisher  _normal_track_report_publisher;
+	ros::Publisher  _extended_track_report_publisher;
 
-	ros::NodeHandle _nodeHandle;
-	ros::Publisher	_heartBeatPublisher;
-	ros::Publisher  _basicTrackReportPublisher;
-	ros::Publisher  _normalTrackReportPublisher;
-	ros::Publisher  _extendedTrackReportPublisher;
+	sensors::RadarHeartbeat _heartbeat_msg;
+	sensors::RadarBasicTrackReport _basic_track_report_msg;
+	sensors::RadarNormalTrackReport _normal_track_report_msg;
+	sensors::RadarExtendedTrackReport _extended_track_report_msg;
 
-	sensors::RadarHeartbeat _heartbeatMsg;
-	sensors::RadarBasicTrackReport _basicTrackReportMsg;
-	sensors::RadarNormalTrackReport _normalTrackReportMsg;
-	sensors::RadarExtendedTrackReport _extendedTrackReportMsg;
-
-	//boost::array<uint8_t, 1> _sendBuf;
-	boost::array<uint8_t, 72> _heartbeatRecvBuf;
-	boost::array<uint8_t, 188> _trackReportRecvBuf;
+	//boost::array<uint8_t, 1> _send_buf;
+	boost::array<uint8_t, HEARTBEATBUFFERSIZE> _heartbeat_recv_buf;
+	boost::array<uint8_t, TRACKREPORTBUFFERSIZE> _track_report_recv_buf;
 	boost::asio::io_service	_io_service;
 	boostUdp::endpoint _server_endpoint;
-	boostUdp::socket _heartbeatSocket;
-	boostUdp::socket _trackReportSocket;
+	boostUdp::socket _heartbeat_socket;
+	boostUdp::socket _track_report_socket;
+
+	bool _save_raw_binary_msg_data;
+	std::string _raw_radar_msg_data_filename;
+	std::ofstream _file_raw_heartbeat_msg_data;
+	std::ofstream _file_raw_trackreport_msg_data;
+	char _aux_buffer_heartbeat[HEARTBEATBUFFERSIZE];
+	char _aux_buffer_trackreport[TRACKREPORTBUFFERSIZE];
 };
-
-
 
 #endif /* RADAR_ROS_BRIDGE_H */

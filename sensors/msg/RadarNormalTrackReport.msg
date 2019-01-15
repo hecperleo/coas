@@ -21,40 +21,40 @@ uint8 DENSITYPOS=136
 
 ##### FIELDS #####
 # Basic Message fields
-RadarBasicTrackReport basicMsg
+RadarBasicTrackReport basic_msg
 
 # Measured X cartesian position
-float32 meaX
+float32 measured_x
 
 # Measured Y cartesian position
-float32 meaY
+float32 measured_y
 
 # Measured azimuth
-float32 meaAzi
+float32 measured_azi
 
 # Measured radar range
-float32 meaRange
+float32 measured_range
 
 # Measured speed
-float32 meaSpeed
+float32 measured_speed
 
 # Measured course
-float32 meaCourse
+float32 measured_course
 
 # Predicted X cartesian position
-float32 preX
+float32 predicted_x
 
 # Predicted Y cartesian position
-float32 preY
+float32 predicted_y
 
 # Predicted radar range
-float32 preRange
+float32 predicted_range
 
 # Predicted speed
-float32 preSpeed
+float32 predicted_speed
 
 # Predicted course
-float32 preCourse
+float32 predicted_course
 
 # Indication of track quality [0.0-1.0] 0=min 1=max
 float32 score

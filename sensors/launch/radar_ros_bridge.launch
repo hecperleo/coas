@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
-	<node name="radar_ros_bridge" pkg="sensors" type="radar_ros_bridge">
+	<arg name="msg_data_filename" default="$(env HOME)/raw_radar_msg_data"/>
+	<node name="radar_ros_bridge" pkg="sensors" type="radar_ros_bridge" output="screen">
 		<!-- Params -->
+		<param name="save_raw_binary_msg_data" value="true" type="bool"/>
+		<param name="raw_radar_msg_data_filename" value="$(arg msg_data_filename)" type="string"/>
 		<param name="heartbeat_listening_port" value="6500" type="int"/>
 		<param name="track_report_listening_port" value="6501" type="int"/>
 		<!-- Publishers -->

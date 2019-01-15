@@ -11,22 +11,22 @@ uint8 INNOERRYPOS=172
 
 ##### FIELDS #####
 # Normal Message fields
-RadarNormalTrackReport normalMsg 
+RadarNormalTrackReport normal_msg 
 
 # Estimation gain on X coordinate
-float32 gainX
+float32 gain_x
 
 # Estimation gain on Y coordinate
-float32 gainY
+float32 gain_y
 
 # Estimation gain on X coordinate
-float32 gainVX
+float32 gain_vx
 
 # Estimation gain on Y coordinate
-float32 gainVY
+float32 gain_vy
 
 # Kalman innovation element (0,0)
-float32 innoErrorX
+float32 innovation_error_x
 
 # Kalman innovation element (1,1)
-float32 innoErrorY
+float32 innovation_error_y

@@ -23,49 +23,49 @@ uint8 LONGITUDEPOS=52
 
 ##### Fields #####
 # Identifier ID constant 0x01AB0101
-uint32 msgIdentifier
+uint32 msg_identifier
 
-string serverName
+string server_name
 
 # Status of the command listening
 # port. 0=Not connected 1=Connected
-uint8 commandListen
+uint8 command_listen
 
 # Client connection.
 # 0=Not connected 1=Connected
-uint8 commandConnected
+uint8 command_connected
 
 # Command listening port
-uint16 commandPort
+uint16 command_port
 
 # Bandwith in MB/s
-float32 rawDistributionThroughput
-float32 proDistributionThroughput
-float32 rawRecordingThroughput
+float32 raw_distribution_throughput
+float32 pro_distribution_throughput
+float32 raw_recording_throughput
 
 # 0=Stop 1=Started
-uint8 sourceStarted
+uint8 source_started
 
 # 0=Not full 1=Full
-uint8 bufferFull
+uint8 buffer_full
 
 # Cpu Load 0-1000 0.1% precission
-uint16 cpuLoad
+uint16 cpu_load
 
 # Antena period in ms
-uint16 currentSourcePeriod
+uint16 current_source_period
 
-# currentSourcePRF
+# current_source_prf
 
 # number of antenna scans from last source start
-uint32 nScans
+uint32 n_scans
 
 # Navigation Data Present
 # 0=No data
 # 1= Data receiving set for all
 # Position, speed over ground
 # course, heading
-uint8 navDataPresent
+uint8 nav_data_present
 
 # Radar Latitude [-90.0-90.0] Degrees
 float32 latitude
