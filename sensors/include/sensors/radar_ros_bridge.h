@@ -17,6 +17,7 @@
 #include "sensors/RadarBasicTrackReport.h"
 #include "sensors/RadarNormalTrackReport.h"
 #include "sensors/RadarExtendedTrackReport.h"
+#include "tracking/RadarCandidate.h"
 
 typedef boost::asio::ip::udp boostUdp;
 typedef sensors::RadarHeartbeat Heartbeat;
@@ -45,17 +46,23 @@ private:
 	void normalTrackReportMsgToROS();
 	void extendedTrackReportMsgToROS();
 
+	void createBasicTrackReportCandidate();
+	void createNormalTrackReportCandidate();
+	void createExtendedTrackReportCandidate();
+
 	ros::NodeHandle _node_handle;
 	ros::NodeHandle _private_node_handle;
 	ros::Publisher	_heartbeat_publisher;
 	ros::Publisher  _basic_track_report_publisher;
 	ros::Publisher  _normal_track_report_publisher;
 	ros::Publisher  _extended_track_report_publisher;
+	ros::Publisher  _radar_candidate_publisher;
 
 	sensors::RadarHeartbeat _heartbeat_msg;
 	sensors::RadarBasicTrackReport _basic_track_report_msg;
 	sensors::RadarNormalTrackReport _normal_track_report_msg;
 	sensors::RadarExtendedTrackReport _extended_track_report_msg;
+	tracking::RadarCandidate _radar_candidate_msg;
 
 	//boost::array<uint8_t, 1> _send_buf;
 	boost::array<uint8_t, HEARTBEATBUFFERSIZE> _heartbeat_recv_buf;
@@ -69,8 +76,6 @@ private:
 	std::string _raw_radar_msg_data_filename;
 	std::ofstream _file_raw_heartbeat_msg_data;
 	std::ofstream _file_raw_trackreport_msg_data;
-	char _aux_buffer_heartbeat[HEARTBEATBUFFERSIZE];
-	char _aux_buffer_trackreport[TRACKREPORTBUFFERSIZE];
 };
 
 #endif /* RADAR_ROS_BRIDGE_H */

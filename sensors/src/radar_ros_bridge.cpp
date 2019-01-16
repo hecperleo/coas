@@ -48,9 +48,8 @@ void RadarRosBridge::udp_handle_receive_heartbeat(const boost::system::error_cod
 		// Save raw binary data
 		if(_save_raw_binary_msg_data)
 		{
-			std::memcpy(_aux_buffer_heartbeat, _heartbeat_recv_buf.data(), num_bytes);
 			_file_raw_heartbeat_msg_data.write((const char*)&num_bytes, sizeof(std::size_t));
-			_file_raw_heartbeat_msg_data.write(_aux_buffer_heartbeat, num_bytes);
+			_file_raw_heartbeat_msg_data.write((const char*)_heartbeat_recv_buf.data(), num_bytes);
 		}
 		
       	// Heartbeat message
@@ -121,6 +120,7 @@ void RadarRosBridge::udp_handle_receive_trackreport(const boost::system::error_c
 {
 	if (!error)
 	{
+		ros::Time reception_time = ros::Time::now();
 		uint32_t msg_identifier = (uint32_t)_track_report_recv_buf[3] << 24  |
       				  			  (uint32_t)_track_report_recv_buf[2] << 16 |
       				  			  (uint32_t)_track_report_recv_buf[1] << 8  |
@@ -129,9 +129,8 @@ void RadarRosBridge::udp_handle_receive_trackreport(const boost::system::error_c
 		// Save raw binary data
 		if(_save_raw_binary_msg_data)
 		{
-			std::memcpy(_aux_buffer_trackreport, _track_report_recv_buf.data(), num_bytes);
 			_file_raw_trackreport_msg_data.write((const char*)&num_bytes, sizeof(std::size_t));
-			_file_raw_trackreport_msg_data.write(_aux_buffer_trackreport, num_bytes);
+			_file_raw_trackreport_msg_data.write((const char*)_track_report_recv_buf.data(),num_bytes);
 		}
       	if(msg_identifier == 0x01AD0101)
       	{
@@ -140,6 +139,11 @@ void RadarRosBridge::udp_handle_receive_trackreport(const boost::system::error_c
       		_basic_track_report_msg.msg_identifier = msg_identifier;
       		this->basicTrackReportMsgToROS();
       		_basic_track_report_publisher.publish(_basic_track_report_msg);
+			// Candidate publishing
+			_radar_candidate_msg.stamp = reception_time;
+			_radar_candidate_msg.report_level = _radar_candidate_msg.BASICREPORTLEVEL;
+			this->createBasicTrackReportCandidate();
+			_radar_candidate_publisher.publish(_radar_candidate_msg);
 		} 
 		else if(msg_identifier == 0x01AD0201)
 		{
@@ -148,6 +152,11 @@ void RadarRosBridge::udp_handle_receive_trackreport(const boost::system::error_c
 			_normal_track_report_msg.basic_msg.msg_identifier = msg_identifier;
 			this->normalTrackReportMsgToROS();
 			_normal_track_report_publisher.publish(_normal_track_report_msg);
+			// Candidate publishing
+			_radar_candidate_msg.stamp = reception_time;
+			_radar_candidate_msg.report_level = _radar_candidate_msg.NORMALREPORTLEVEL;
+			this->createNormalTrackReportCandidate();
+			_radar_candidate_publisher.publish(_radar_candidate_msg);
 		} 
 		else if(msg_identifier == 0x01AD0301)
 		{
@@ -156,6 +165,11 @@ void RadarRosBridge::udp_handle_receive_trackreport(const boost::system::error_c
 			_extended_track_report_msg.normal_msg.basic_msg.msg_identifier = msg_identifier;
 			this->extendedTrackReportMsgToROS();
 			_extended_track_report_publisher.publish(_extended_track_report_msg);
+			// Candidate publishing
+			_radar_candidate_msg.stamp = reception_time;
+			_radar_candidate_msg.report_level = _radar_candidate_msg.NORMALREPORTLEVEL;
+			this->createExtendedTrackReportCandidate();
+			_radar_candidate_publisher.publish(_radar_candidate_msg);
 		} 
 		else 
 		{
@@ -270,12 +284,48 @@ void RadarRosBridge::extendedTrackReportMsgToROS()
     _extended_track_report_msg.innovation_error_y = aux_float;
 }
 
+void RadarRosBridge::createBasicTrackReportCandidate()
+{
+	_radar_candidate_msg.track_id = _basic_track_report_msg.track_id;
+	_radar_candidate_msg.e_status = _basic_track_report_msg.e_status;
+	_radar_candidate_msg.n_hits = _basic_track_report_msg.n_hits;
+	_radar_candidate_msg.estimated_x = _basic_track_report_msg.estimated_x;
+	_radar_candidate_msg.estimated_y = _basic_track_report_msg.estimated_y;
+	_radar_candidate_msg.estimated_azimuth = _basic_track_report_msg.estimated_azi;
+	_radar_candidate_msg.estimated_range = _basic_track_report_msg.estimated_range;
+	_radar_candidate_msg.estimated_speed = _basic_track_report_msg.estimated_speed;
+	_radar_candidate_msg.estimated_course = _basic_track_report_msg.estimated_course;
+	_radar_candidate_msg.estimated_latitude = _basic_track_report_msg.estimated_lat;
+	_radar_candidate_msg.estimated_longitude = _basic_track_report_msg.estimated_lon;
+	_radar_candidate_msg.time_stamp = _basic_track_report_msg.time_stamp;
+	_radar_candidate_msg.measured_range_size = _basic_track_report_msg.measured_range_size;
+	_radar_candidate_msg.measured_azimuth_size = _basic_track_report_msg.measured_azimuth_size;
+}
+
+void RadarRosBridge::createNormalTrackReportCandidate()
+{
+	this->createBasicTrackReportCandidate();
+	_radar_candidate_msg.measured_x = _normal_track_report_msg.measured_x;
+	_radar_candidate_msg.measured_y = _normal_track_report_msg.measured_y;
+	_radar_candidate_msg.measured_azimuth = _normal_track_report_msg.measured_azi;
+	_radar_candidate_msg.measured_range = _normal_track_report_msg.measured_range;
+	_radar_candidate_msg.measured_speed = _normal_track_report_msg.measured_speed;
+	_radar_candidate_msg.measured_course = _normal_track_report_msg.measured_course;
+	_radar_candidate_msg.score = _normal_track_report_msg.score;
+}
+
+void RadarRosBridge::createExtendedTrackReportCandidate()
+{
+	this->createNormalTrackReportCandidate();
+}
+
 void RadarRosBridge::main()
 {
 	_heartbeat_publisher = _node_handle.advertise<sensors::RadarHeartbeat>("heartbeat", 10);
 	_basic_track_report_publisher = _node_handle.advertise<sensors::RadarBasicTrackReport>("basic_track_report", 10);
 	_normal_track_report_publisher = _node_handle.advertise<sensors::RadarNormalTrackReport>("normal_track_report", 10);
 	_extended_track_report_publisher = _node_handle.advertise<sensors::RadarExtendedTrackReport>("extended_track_report", 10);
+	_radar_candidate_publisher = _node_handle.advertise<tracking::RadarCandidate>("radar_candidate",10);
 	//ros::Duration(1).sleep();
 	try
 	{
