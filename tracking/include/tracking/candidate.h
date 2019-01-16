@@ -21,6 +21,10 @@ struct Candidate{
     /// Candidate's size. -1:unknown, 0: Small, 1: Medium, 2: Large.
     int size;
 
+    // TODO: new fields
+    // source_sensor
+    
+    //
 };
 
 #endif

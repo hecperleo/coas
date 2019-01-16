@@ -16,6 +16,9 @@
 #include <pcl/segmentation/extract_clusters.h>
 #include <jsk_recognition_msgs/BoundingBox.h>
 #include <jsk_recognition_msgs/BoundingBoxArray.h>
+#include <detection/PostsPositions.h>
+#include <tracking/LidarCandidatesList.h>
+#include <tracking/LidarCandidate.h>
 
 class BoundingBoxes
 {
@@ -62,7 +65,7 @@ private:
   ros::Publisher pub_path_post_12_, pub_path_post_13_, pub_path_post_23_;
   ros::Publisher pub_posts_positions_; /// TODO
   // Candidates Publisher
-  ros::Publisher pub_candidates_;
+  ros::Publisher pub_lidar_candidates_list_;
 
   // Variables
   std::string frame_id_;

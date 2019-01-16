@@ -1,6 +1,4 @@
 #include <detection/bounding_boxes.h>
-#include <detection/PostsPositions.h>
-#include <tracking/CandidateMsg.h>
 
 #define DOCKING 1
 #define HARBOR 2
@@ -30,7 +28,7 @@ BoundingBoxes::BoundingBoxes() : nh_(), pnh_("~")
     pub_posts_positions_ = nh_.advertise<detection::PostsPositions>("posts_positions", 1); //// TODO
 
     // Candidate publisher
-    pub_candidates_ = nh_.advertise<tracking::CandidateMsg>("candidates",1);
+    pub_lidar_candidates_list_ = nh_.advertise<tracking::LidarCandidatesList>("lidar_candidates_list",1);
 
     char *envvar_home;
     envvar_home = std::getenv("HOME");
@@ -285,22 +283,23 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
 
         // OBSTACLE ESTIMATOR
         // TODO: Adjust this covariance
-        tracking::CandidateMsg candidate_msg;
-        candidate_msg.header.stamp = ros::Time::now();
+        tracking::LidarCandidate lidar_candidate_msg;
+        tracking::LidarCandidatesList lidar_candidates_list;
+        lidar_candidates_list.header.stamp = ros::Time::now();
         std::vector<double> aux_covariance({0.3, 0.1, 0.1, 0.3});
-        candidate_msg.location_covariance = aux_covariance;
-        candidate_msg.speed_covariance = aux_covariance;
-        candidate_msg.speed.x = 0.0;
-        candidate_msg.speed.y = 0.0;
-        candidate_msg.speed.z = 0.0;
+        lidar_candidate_msg.location_covariance = aux_covariance;
+        lidar_candidate_msg.speed_covariance = aux_covariance;
+        lidar_candidate_msg.speed.x = 0.0;
+        lidar_candidate_msg.speed.y = 0.0;
+        lidar_candidate_msg.speed.z = 0.0;
         // If the docking phase is active, send reference boxes as candidates
         if(phase_ == DOCKING)
         {
             for(auto it = post_reference_boxes_.boxes.begin(); it != post_reference_boxes_.boxes.end(); ++it)
             {
-                candidate_msg.size = tracking::CandidateMsg::SIZE_UNKNOWN;
-                candidate_msg.location = it->pose.position;
-                pub_candidates_.publish(candidate_msg);
+                lidar_candidate_msg.size = tracking::LidarCandidate::SIZE_UNKNOWN;
+                lidar_candidate_msg.location = it->pose.position;
+                lidar_candidates_list.lidar_candidates_list.push_back(lidar_candidate_msg);
             }
         }
         // If another phase is active, send merge_boxes_ as candidates
@@ -308,10 +307,14 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
         {
             for(auto it = merge_boxes_.boxes.begin(); it != merge_boxes_.boxes.end(); ++it)
             {   
-                candidate_msg.size = tracking::CandidateMsg::SIZE_UNKNOWN;
-                candidate_msg.location = it->pose.position;
-                pub_candidates_.publish(candidate_msg);
+                lidar_candidate_msg.size = tracking::LidarCandidate::SIZE_UNKNOWN;
+                lidar_candidate_msg.location = it->pose.position;
+                lidar_candidates_list.lidar_candidates_list.push_back(lidar_candidate_msg);
             }
+        }
+        if(!lidar_candidates_list.lidar_candidates_list.empty())
+        {
+            pub_lidar_candidates_list_.publish(lidar_candidates_list);
         }
     }
     std::cout << "[ BBXS] Time: " << ros::Time::now().toSec() - time_start << std::endl;

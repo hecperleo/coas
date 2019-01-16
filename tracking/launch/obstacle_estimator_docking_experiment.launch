@@ -7,15 +7,15 @@
     <include file="$(find detection)/launch/docking.launch"/>
 
     <node pkg="tracking" type="estimator_node" name="estimator_node" output="screen" required="true">
-        <param name="estimator_rate" value="5.0" type="double" />
-        <param name="lost_time_th" value="0.5" type="double" />
+        <param name="estimator_rate" value="10.0" type="double" />
+        <param name="lost_time_th" value="1.5" type="double" />
         <!--<param name="min_update_count" value="5" type="int" /> -->
-        <param name="association_th" value="2.0" type="double" /> <!-- Max distance to accept a match between target and candidate -->
+        <param name="association_th" value="4.0" type="double" /> <!-- Max distance to accept a match between target and candidate -->
         <param name="delay_max" value="2.0" type="double" />
         <param name="reference_frame"  value="/velodyne" type="str" />
         <param name="use_mahalanobis_distance" value="true" type="bool" />
         <!-- Subscribers -->
-        <remap from="candidates" to="candidates"/>
+        <remap from="lidar_candidates_list" to="lidar_candidates_list"/>
         <!-- Publishers -->
         <remap from="targets_belief" to="targets_belief"/>
     </node>

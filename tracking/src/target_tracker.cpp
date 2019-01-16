@@ -46,7 +46,6 @@ TargetTracker::~TargetTracker()
 */
 void TargetTracker::initialize(Candidate* z)
 {
-
 	// Setup state vector
 	pose_.setZero(4, 1);
 	pose_(0,0) = z->location(0);

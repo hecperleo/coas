@@ -54,7 +54,10 @@ find_package(Eigen3 REQUIRED)
 ## Generate messages in the 'msg' folder
  add_message_files(
    FILES
-   CandidateMsg.msg
+   LidarCandidate.msg
+   LidarCandidatesList.msg
+   RadarCandidate.msg
+   AisCandidate.msg
  )
 
 ## Generate services in the 'srv' folder

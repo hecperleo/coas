@@ -69,7 +69,7 @@ bool CentralizedEstimator::update(vector<Candidate*> cand_list)
 		if((it->second)->getStatus() == ACTIVE)
 		{
 			valid_targets.push_back((it->second)->getId());
-				n_valid_targets++;
+			n_valid_targets++;
 		}
 		else
 		{
@@ -328,7 +328,6 @@ void CentralizedEstimator::removeLostTargets()
 		//TODO: target status is never LOST so this check doesn't make sense now
 		/*
 		if( ((it->second)->getStatus() == LOST) 
-		|| ((it->second)->lastUpdateTime() > lost_th_ && (it->second)->getUpdateCount() < min_update_count_) 
 		|| ((it->second)->lastUpdateTime() > lost_th_ && (it->second)->getUpdateCount() < min_update_count_) )
 		*/
 		if( (it->second)->lastUpdateTime() > lost_th_ )

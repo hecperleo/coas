@@ -11,7 +11,10 @@
 
 #include <tracking/centralized_estimator.h>
 #include <tracking/candidate.h>
-#include <tracking/CandidateMsg.h>
+#include <tracking/LidarCandidate.h>
+#include <tracking/LidarCandidatesList.h>
+#include <tracking/RadarCandidate.h>
+#include <tracking/AisCandidate.h>
 
 #include <tracking/random_color_generator.hpp>
 
@@ -36,8 +39,10 @@ public:
 protected:
 
 	/// Callbacks
-	void candidatesReceived(const tracking::CandidateMsg::ConstPtr& candidate_msg);
-	
+	void lidarCandidatesListReceived(const tracking::LidarCandidatesList::ConstPtr& lidar_candidates_list_msg);
+	void radarCandidatesReceived(const tracking::RadarCandidate::ConstPtr& radar_candidate_msg);
+	void aisCandidatesReceived(const tracking::AisCandidate::ConstPtr& ais_candidate_msg);
+
 	void publishBelief();
 	void eigendec(double c11, double c22, double c12, vector<double> &D, vector<double> &E);
 	
@@ -46,13 +51,16 @@ protected:
 	ros::NodeHandle* pnh_;
 
 	/// Subscribers
-	ros::Subscriber candidate_sub_;
-
+	ros::Subscriber lidar_candidates_list_sub_;
+	ros::Subscriber radar_candidate_sub_;
+	ros::Subscriber ais_candidate_sub_;
 	/// Publishers
 	ros::Publisher belief_pub_;
 
 	/// Candidates queues
-	vector<Candidate *> candidates_;
+	vector<Candidate *> lidar_candidates_;
+	vector<Candidate *> radar_candidates_;
+	vector<Candidate *> ais_candidates_;
 
 	/// Estimator frequency
 	double estimator_rate_;
@@ -98,7 +106,9 @@ EstimatorNode::EstimatorNode()
 	estimator_ = new CentralizedEstimator(association_th, lost_time_th, min_update_count, use_mahalanobis_distance);
 	
 	// Subscriptions/publications
-	candidate_sub_ = nh_->subscribe<tracking::CandidateMsg>("candidates", 1, &EstimatorNode::candidatesReceived, this);
+	lidar_candidates_list_sub_ = nh_->subscribe<tracking::LidarCandidatesList>("lidar_candidates_list", 1, &EstimatorNode::lidarCandidatesListReceived, this);
+	radar_candidate_sub_ = nh_->subscribe<tracking::RadarCandidate>("radar_candidate", 100, &EstimatorNode::radarCandidatesReceived, this);
+	ais_candidate_sub_ = nh_->subscribe<tracking::AisCandidate>("ais_candidate",100, &EstimatorNode::aisCandidatesReceived, this);
 	belief_pub_ = nh_->advertise<visualization_msgs::MarkerArray>("targets_belief", 1);
 
 	// Main loop
@@ -122,13 +132,24 @@ EstimatorNode::EstimatorNode()
 			estimator_->predict(elapsed_time);
 
 		// Update
-		estimator_->update(candidates_); 
+		if(!lidar_candidates_.empty())
+			estimator_->update(lidar_candidates_);
+		if(!radar_candidates_.empty())
+			estimator_->update(radar_candidates_);
+		if(!ais_candidates_.empty())
+			estimator_->update(ais_candidates_);
 		
 		// Remove candidates
-		for(int i = 0; i < candidates_.size(); i++)
-			delete candidates_[i];
-	
-		candidates_.clear();
+		for(int i = 0; i < lidar_candidates_.size(); i++)
+			delete lidar_candidates_[i];
+		for(int i = 0; i < radar_candidates_.size(); i++)
+			delete radar_candidates_[i];
+		for(int i = 0; i < ais_candidates_.size(); i++)
+			delete ais_candidates_[i];	
+
+		lidar_candidates_.clear();
+		radar_candidates_.clear();
+		ais_candidates_.clear();
 
 		estimator_->removeLostTargets();
 		
@@ -154,44 +175,82 @@ EstimatorNode::~EstimatorNode()
 	delete pnh_;
 	delete estimator_;
 
-	for(int i = 0; i < candidates_.size(); i++)
-		delete candidates_[i];
-	
-	candidates_.clear();
+	for(int i = 0; i < lidar_candidates_.size(); i++)
+		delete lidar_candidates_[i];
+	for(int i = 0; i < radar_candidates_.size(); i++)
+		delete radar_candidates_[i];
+	for(int i = 0; i < ais_candidates_.size(); i++)
+		delete ais_candidates_[i];	
+			
+	lidar_candidates_.clear();
+	radar_candidates_.clear();
+	ais_candidates_.clear();
 }
 
-/** \brief Callback to receive observations from vision module
+/** \brief Callback to receive observations from sensors modules
 */
-void EstimatorNode::candidatesReceived(const tracking::CandidateMsg::ConstPtr& candidate_msg)
+void EstimatorNode::lidarCandidatesListReceived(const tracking::LidarCandidatesList::ConstPtr& lidar_candidates_list_msg)
 {
-	double delay = (ros::Time::now() - candidate_msg->header.stamp).toSec();
+	double delay = (ros::Time::now() - lidar_candidates_list_msg->header.stamp).toSec();
 	
 	if(delay < delay_max_)
-	{		
-		Candidate* cand_p = new Candidate;
-		
-		cand_p->size = candidate_msg->size;
-		cand_p->location(0) = candidate_msg->location.x;
-		cand_p->location(1) = candidate_msg->location.y;
-		cand_p->speed(0) = candidate_msg->speed.x;
-		cand_p->speed(1) = candidate_msg->speed.y;
-		
-		cand_p->location_covariance.setZero(2,2);
-		cand_p->speed_covariance.setZero(2,2);
-		
-		for(int i = 0; i < 2; i++)
+	{	
+		for(auto it = lidar_candidates_list_msg->lidar_candidates_list.begin(); it != lidar_candidates_list_msg->lidar_candidates_list.end(); ++it)
 		{
-			for(int j = 0; j < 2; j++)
+			Candidate* cand_p = new Candidate;
+		
+			cand_p->size = it->size;
+			cand_p->location(0) = it->location.x;
+			cand_p->location(1) = it->location.y;
+			cand_p->speed(0) = it->speed.x;
+			cand_p->speed(1) = it->speed.y;
+		
+			cand_p->location_covariance.setZero(2,2);
+			cand_p->speed_covariance.setZero(2,2);
+		
+			for(int i = 0; i < 2; i++)
 			{
-				cand_p->location_covariance(i,j) = candidate_msg->location_covariance[i*2+j];
-				cand_p->speed_covariance(i,j) = candidate_msg->speed_covariance[i*2+j];
-			}	
+				for(int j = 0; j < 2; j++)
+				{
+					cand_p->location_covariance(i,j) = it->location_covariance[i*2+j];
+					cand_p->speed_covariance(i,j) = it->speed_covariance[i*2+j];
+				}	
+			}
+			lidar_candidates_.push_back(cand_p);
 		}
-	
-		candidates_.push_back(cand_p);
 	}
 	else
-		ROS_WARN("Received candidate with long delay");
+		ROS_WARN("Received lidar candidates with long delay");
+}
+
+void EstimatorNode::radarCandidatesReceived(const tracking::RadarCandidate::ConstPtr& radar_candidate_msg)
+{
+	double delay = (ros::Time::now() - radar_candidate_msg->stamp).toSec();
+
+	if(delay < delay_max_)
+	{
+		Candidate* cand_p = new Candidate;
+		// TODO
+		//...
+		radar_candidates_.push_back(cand_p);
+	}
+	else
+		ROS_WARN("Received radar candidate with long delay");
+}
+
+void EstimatorNode::aisCandidatesReceived(const tracking::AisCandidate::ConstPtr& ais_candidate_msg)
+{
+	double delay = (ros::Time::now() - ais_candidate_msg->stamp).toSec();
+
+	if(delay < delay_max_)
+	{
+		Candidate* cand_p = new Candidate;
+		// TODO
+		//...
+		radar_candidates_.push_back(cand_p);
+	}
+	else
+		ROS_WARN("Received radar candidate with long delay");	
 }
 
 /** \brief Publish markers to represent targets beliefs
@@ -254,7 +313,7 @@ void EstimatorNode::publishBelief()
 				marker.color = aux_color;
 			}
 
-			// Set the namespace and id for this marker.  This serves to create a unique ID    
+			// Set the namespace and id for this marker. This serves to create a unique ID    
 			// Any marker sent with the same namespace and id will overwrite the old one    
 			marker.ns = "cov_ellipse";    
 			marker.id = active_targets[i];
