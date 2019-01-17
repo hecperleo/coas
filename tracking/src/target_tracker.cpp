@@ -240,7 +240,8 @@ double TargetTracker::getMahaDistance(Candidate* z)
 
 	// This is a squared distance
 	distance = y.transpose()*S.inverse()*y;
-	
+	// Get non squared distance
+	distance = sqrt(distance);
 	double prob_z, prob_size = 0.0;
 
 	/*

@@ -7,12 +7,12 @@
     <include file="$(find detection)/launch/sea.launch"/>
     
     <node pkg="tracking" type="estimator_node" name="estimator_node" output="screen" required="true">
-        <param name="estimator_rate" value="5.0" type="double" />
+        <param name="estimator_rate" value="10" type="double" /> <!-- TODO -->
         <param name="lost_time_th" value="2.5" type="double" />
         <!--<param name="min_update_count" value="3" type="int" /> -->
         <param name="association_th" value="7.0" type="double" /> <!-- Max distance to accept a match between target and candidate -->
         <param name="delay_max" value="2.0" type="double" />
-        <param name="use_mahalanobis_distance" value="false" type="bool" />
+        <param name="use_mahalanobis_distance" value="true" type="bool" />
         <param name="reference_frame"  value="/velodyne" type="str" />
         <remap from="candidates" to="candidates"/>
         <remap from="targets_belief" to="targets_belief"/>
