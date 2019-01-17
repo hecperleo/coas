@@ -25,10 +25,10 @@ BoundingBoxes::BoundingBoxes() : nh_(), pnh_("~")
     pub_path_post_13_ = nh_.advertise<nav_msgs::Path>("path_post_13", 1);
     pub_path_post_23_ = nh_.advertise<nav_msgs::Path>("path_post_23", 1);
 
-    pub_posts_positions_ = nh_.advertise<detection::PostsPositions>("posts_positions", 1); //// TODO
+    pub_posts_positions_ = nh_.advertise<detection::PostsPositions>("posts_positions", 1);
 
     // Candidate publisher
-    pub_lidar_candidates_list_ = nh_.advertise<tracking::LidarCandidatesList>("lidar_candidates_list",1);
+    pub_lidar_candidates_list_ = nh_.advertise<tracking::LidarCandidatesList>("lidar_candidates",1);
 
     char *envvar_home;
     envvar_home = std::getenv("HOME");
@@ -154,10 +154,6 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
     // How close must be a point from the model to consider it in line
     seg.setDistanceThreshold(distance_threshold_); // (default 0.02)
 
-    /// TODO: check if the number of points is greater than a threshold
-    /// if not, skip all the processing of the received pointcloud
-    int nr_points = (int)downsampled_XYZ->points.size();
-
     // Contains the point cloud of the plane
     if (phase_ == DOCKING || phase_ == HARBOR)
     {
@@ -168,6 +164,7 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
             percentage = 0.9;
 
         int loop_counter = 0;
+        int nr_points = (int)downsampled_XYZ->points.size();
         // While 30% [90%] of the original point cloud still there
         while( (downsampled_XYZ->points.size() > percentage * nr_points) && (loop_counter < 30) )
         {

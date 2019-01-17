@@ -75,8 +75,11 @@ private:
   std::vector<std::vector<int>> vec_vec_label_polygon_;
   jsk_recognition_msgs::BoundingBox box_;
   jsk_recognition_msgs::BoundingBoxArray boxes_, post_candidates_boxes_, post_reference_boxes_ ,merge_boxes_;
-  float x_max_, x_min_, y_max_, y_min_, z_max_, z_min_, x_center_, y_center_, z_center_;
-  float max_dist_x_, max_dist_y_, max_dist_z_, max_dist_x_polygon_, max_dist_y_polygon_, max_dist_z_polygon_;
+  float x_max_, y_max_, z_max_;
+  float x_min_, y_min_, z_min_;
+  float x_center_, y_center_, z_center_;
+  float max_dist_x_, max_dist_y_, max_dist_z_;
+  float max_dist_x_polygon_, max_dist_y_polygon_, max_dist_z_polygon_;
   nav_msgs::Path path_post_1_, path_post_2_, path_post_3_, path_post_12_, path_post_13_, path_post_23_;
 
   std::string log_output_;
@@ -93,7 +96,8 @@ private:
   float distance_threshold_, cluster_tolerance_, min_cluster_size_, max_cluster_size_;
   // Bounding Boxes specific parameters
   float close_distance_, xy_min_post_, xy_max_post_, z_min_post_, z_max_post_;
-  float min_distance_post_12_, max_distance_post_12_, min_distance_post_13_, max_distance_post_13_;
+  float min_distance_post_12_, max_distance_post_12_;
+  float min_distance_post_13_, max_distance_post_13_;
 };
 
 #endif

@@ -57,7 +57,9 @@ find_package(Eigen3 REQUIRED)
    LidarCandidate.msg
    LidarCandidatesList.msg
    RadarCandidate.msg
+   RadarCandidatesList.msg
    AisCandidate.msg
+   AisCandidatesList.msg
  )
 
 ## Generate services in the 'srv' folder

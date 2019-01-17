@@ -9,6 +9,8 @@ _private_node_handle("~"),
 _heartbeat_socket(_io_service, boostUdp::endpoint(boostUdp::v4(), heartbeat_listening_port)),
 _track_report_socket(_io_service, boostUdp::endpoint(boostUdp::v4(), track_report_listening_port))
 {
+	_working_frequency = 5;
+	_private_node_handle.getParam("working_frequency", _working_frequency);
 	_save_raw_binary_msg_data = false;
 	_private_node_handle.getParam("save_raw_binary_msg_data", _save_raw_binary_msg_data);
 	_private_node_handle.getParam("raw_radar_msg_data_filename", _raw_radar_msg_data_filename);
@@ -121,6 +123,7 @@ void RadarRosBridge::udp_handle_receive_trackreport(const boost::system::error_c
 	if (!error)
 	{
 		ros::Time reception_time = ros::Time::now();
+		_radar_candidate_msg.stamp = reception_time;
 		uint32_t msg_identifier = (uint32_t)_track_report_recv_buf[3] << 24  |
       				  			  (uint32_t)_track_report_recv_buf[2] << 16 |
       				  			  (uint32_t)_track_report_recv_buf[1] << 8  |
@@ -140,10 +143,9 @@ void RadarRosBridge::udp_handle_receive_trackreport(const boost::system::error_c
       		this->basicTrackReportMsgToROS();
       		_basic_track_report_publisher.publish(_basic_track_report_msg);
 			// Candidate publishing
-			_radar_candidate_msg.stamp = reception_time;
 			_radar_candidate_msg.report_level = _radar_candidate_msg.BASICREPORTLEVEL;
 			this->createBasicTrackReportCandidate();
-			_radar_candidate_publisher.publish(_radar_candidate_msg);
+			_radar_candidates_list.radar_candidates_list.push_back(_radar_candidate_msg);
 		} 
 		else if(msg_identifier == 0x01AD0201)
 		{
@@ -153,10 +155,9 @@ void RadarRosBridge::udp_handle_receive_trackreport(const boost::system::error_c
 			this->normalTrackReportMsgToROS();
 			_normal_track_report_publisher.publish(_normal_track_report_msg);
 			// Candidate publishing
-			_radar_candidate_msg.stamp = reception_time;
 			_radar_candidate_msg.report_level = _radar_candidate_msg.NORMALREPORTLEVEL;
 			this->createNormalTrackReportCandidate();
-			_radar_candidate_publisher.publish(_radar_candidate_msg);
+			_radar_candidates_list.radar_candidates_list.push_back(_radar_candidate_msg);
 		} 
 		else if(msg_identifier == 0x01AD0301)
 		{
@@ -166,10 +167,9 @@ void RadarRosBridge::udp_handle_receive_trackreport(const boost::system::error_c
 			this->extendedTrackReportMsgToROS();
 			_extended_track_report_publisher.publish(_extended_track_report_msg);
 			// Candidate publishing
-			_radar_candidate_msg.stamp = reception_time;
 			_radar_candidate_msg.report_level = _radar_candidate_msg.NORMALREPORTLEVEL;
 			this->createExtendedTrackReportCandidate();
-			_radar_candidate_publisher.publish(_radar_candidate_msg);
+			_radar_candidates_list.radar_candidates_list.push_back(_radar_candidate_msg);
 		} 
 		else 
 		{
@@ -325,7 +325,7 @@ void RadarRosBridge::main()
 	_basic_track_report_publisher = _node_handle.advertise<sensors::RadarBasicTrackReport>("basic_track_report", 10);
 	_normal_track_report_publisher = _node_handle.advertise<sensors::RadarNormalTrackReport>("normal_track_report", 10);
 	_extended_track_report_publisher = _node_handle.advertise<sensors::RadarExtendedTrackReport>("extended_track_report", 10);
-	_radar_candidate_publisher = _node_handle.advertise<tracking::RadarCandidate>("radar_candidate",10);
+	_radar_candidates_list_publisher = _node_handle.advertise<tracking::RadarCandidatesList>("radar_candidates",10);
 	//ros::Duration(1).sleep();
 	try
 	{
@@ -361,11 +361,17 @@ void RadarRosBridge::main()
 	{
 		ROS_WARN_STREAM("Exception related with UDP socket: " << e.what());
 	}
-	while (ros::ok())
+	ros::Rate rate(_working_frequency);
+	while(ros::ok())
 	{
 		//_io_service.poll_one();
 		_io_service.poll(); // Execute all ready handlers, then continue
-		ros::Duration(0.05).sleep();
+		if(!_radar_candidates_list.radar_candidates_list.empty())
+		{
+			_radar_candidates_list_publisher.publish(_radar_candidates_list);
+			_radar_candidates_list.radar_candidates_list.clear();
+		}
+		rate.sleep();
 	}
 }
 

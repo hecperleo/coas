@@ -14,6 +14,7 @@
 #include <tracking/LidarCandidate.h>
 #include <tracking/LidarCandidatesList.h>
 #include <tracking/RadarCandidate.h>
+#include <tracking/RadarCandidatesList.h>
 #include <tracking/AisCandidate.h>
 
 #include <tracking/random_color_generator.hpp>
@@ -40,7 +41,7 @@ protected:
 
 	/// Callbacks
 	void lidarCandidatesListReceived(const tracking::LidarCandidatesList::ConstPtr& lidar_candidates_list_msg);
-	void radarCandidatesReceived(const tracking::RadarCandidate::ConstPtr& radar_candidate_msg);
+	void radarCandidatesListReceived(const tracking::RadarCandidatesList::ConstPtr& radar_candidates_list_msg);
 	void aisCandidatesReceived(const tracking::AisCandidate::ConstPtr& ais_candidate_msg);
 
 	void publishBelief();
@@ -52,7 +53,7 @@ protected:
 
 	/// Subscribers
 	ros::Subscriber lidar_candidates_list_sub_;
-	ros::Subscriber radar_candidate_sub_;
+	ros::Subscriber radar_candidates_list_sub_;
 	ros::Subscriber ais_candidate_sub_;
 	/// Publishers
 	ros::Publisher belief_pub_;
@@ -106,8 +107,8 @@ EstimatorNode::EstimatorNode()
 	estimator_ = new CentralizedEstimator(association_th, lost_time_th, min_update_count, use_mahalanobis_distance);
 	
 	// Subscriptions/publications
-	lidar_candidates_list_sub_ = nh_->subscribe<tracking::LidarCandidatesList>("lidar_candidates_list", 1, &EstimatorNode::lidarCandidatesListReceived, this);
-	radar_candidate_sub_ = nh_->subscribe<tracking::RadarCandidate>("radar_candidate", 100, &EstimatorNode::radarCandidatesReceived, this);
+	lidar_candidates_list_sub_ = nh_->subscribe<tracking::LidarCandidatesList>("lidar_candidates", 1, &EstimatorNode::lidarCandidatesListReceived, this);
+	radar_candidates_list_sub_ = nh_->subscribe<tracking::RadarCandidatesList>("radar_candidates", 1, &EstimatorNode::radarCandidatesListReceived, this);
 	ais_candidate_sub_ = nh_->subscribe<tracking::AisCandidate>("ais_candidate",100, &EstimatorNode::aisCandidatesReceived, this);
 	belief_pub_ = nh_->advertise<visualization_msgs::MarkerArray>("targets_belief", 1);
 
@@ -187,7 +188,7 @@ EstimatorNode::~EstimatorNode()
 	ais_candidates_.clear();
 }
 
-/** \brief Callback to receive observations from sensors modules
+/** \brief Callback to receive observations from LIDAR
 */
 void EstimatorNode::lidarCandidatesListReceived(const tracking::LidarCandidatesList::ConstPtr& lidar_candidates_list_msg)
 {
@@ -223,21 +224,52 @@ void EstimatorNode::lidarCandidatesListReceived(const tracking::LidarCandidatesL
 		ROS_WARN("Received lidar candidates with long delay");
 }
 
-void EstimatorNode::radarCandidatesReceived(const tracking::RadarCandidate::ConstPtr& radar_candidate_msg)
+/** \brief Callback to receive observations from RADAR
+*/ 
+void EstimatorNode::radarCandidatesListReceived(const tracking::RadarCandidatesList::ConstPtr& radar_candidates_list_msg)
 {
-	double delay = (ros::Time::now() - radar_candidate_msg->stamp).toSec();
-
-	if(delay < delay_max_)
+	for(auto it = radar_candidates_list_msg->radar_candidates_list.begin(); it != radar_candidates_list_msg->radar_candidates_list.end(); ++it)
 	{
-		Candidate* cand_p = new Candidate;
-		// TODO
-		//...
-		radar_candidates_.push_back(cand_p);
+		// Decide which time stamp to use
+		// TODO: Time stamp of the radar msg reception at radar_ros_bridge 
+		double delay = (ros::Time::now() - it->stamp).toSec();
+		// TODO: Time stamp of the track detection by the radar
+		// double delay = (ros::Time::now() - it->time_stamp).toSec();
+
+		if(delay < delay_max_)
+		{
+			Candidate* cand_p = new Candidate;
+
+			// TODO *****************************
+			cand_p->size = 0;
+			cand_p->location(0) = 0;
+			cand_p->location(1) = 0;
+			cand_p->speed(0) = 0;
+			cand_p->speed(1) = 0;
+
+			cand_p->location_covariance.setZero(2,2);
+			cand_p->speed_covariance.setZero(2,2);
+
+			for(int i = 0; i < 2; i++)
+			{
+				for(int j = 0; j < 2; j++)
+				{
+					cand_p->location_covariance(i,j) = 0;
+					cand_p->speed_covariance(i,j) = 0;
+				}	
+			}
+
+			// More fields
+			//********************************
+			radar_candidates_.push_back(cand_p);
+		}
+		else
+			ROS_WARN("Received radar candidate with long delay");
 	}
-	else
-		ROS_WARN("Received radar candidate with long delay");
 }
 
+/** \brief Callback to receive observations from AIS
+*/ 
 void EstimatorNode::aisCandidatesReceived(const tracking::AisCandidate::ConstPtr& ais_candidate_msg)
 {
 	double delay = (ros::Time::now() - ais_candidate_msg->stamp).toSec();
