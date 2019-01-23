@@ -40,7 +40,7 @@ public:
 	bool update(Candidate* z);
 	double getMahaDistance(Candidate* z);
 	double getDistance(Candidate* z);
-	double lastUpdateTime();
+	ros::Duration lastUpdateTime();
 	int getUpdateCount();
 	void getPose(double &x, double &y);
 	void getVelocity(double &vx, double &vy);

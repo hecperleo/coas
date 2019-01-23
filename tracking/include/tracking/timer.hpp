@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 // GRVC 
-// Author Ignacio Perez <iperde@upo.es>
+// Author Alejandro Braza Barba <alejandrobrazabarba@gmail.com>
 //------------------------------------------------------------------------------
 //
 // Copyright (c) 2016 GRVC University of Seville
@@ -10,14 +10,14 @@
 #ifndef TIMER_H_
 #define TIMER_H_
 
-#include <chrono>
+#include <ros/time.h>
 
 /**
  * class Timer
  *
- * A simple timer implementation by using std::chrono
+ * A simple timer implementation by using ros::Time
  *
- * @author Ignacio Perez
+ * @author Alejandro Braza Barba
  */
 
 class Timer
@@ -26,23 +26,21 @@ public:
     /**
      * Create a new timer and start it
      */
-    Timer() : beg_(clock_::now()) {}
+    Timer() : beg_(ros::Time::now()) {}
     /**
      * Reset the timer to 0
      */
-    void reset() { beg_ = clock_::now(); }
+    void reset() { beg_ = ros::Time::now(); }
     /**
      * Get the elapsed time in seconds since the creation
      * of the object or the last time reset() method was called
      * @return elapsed: the elapsed time in seconds
      */
-    double elapsed() const { 
-        return std::chrono::duration_cast<second_>
-            (clock_::now() - beg_).count(); }
+    ros::Duration elapsed() const { 
+        return ros::Duration
+            (ros::Time::now() - beg_); }
 private:
-    typedef std::chrono::high_resolution_clock clock_;
-    typedef std::chrono::duration<double, std::ratio<1> > second_;
-    std::chrono::time_point<clock_> beg_;
+    ros::Time beg_;
 };
 
 #endif

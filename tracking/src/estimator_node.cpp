@@ -119,6 +119,8 @@ EstimatorNode::EstimatorNode()
 
 	int count = 0;
 
+	while(ros::Time::now() == ros::Time(0)); // If in simulation, wait until /clock messages are published
+
 	while(nh_->ok())
 	{
 		// Execute all pending callbacks until this moment

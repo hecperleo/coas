@@ -8,6 +8,7 @@ int main(int argc, char **argv)
     pnh.param<int>("working_frequency", working_frequency, 10);
     SensorFilter filter;
     ros::Rate rate(working_frequency); //TODO: fine adjustment of working frequency
+    while(ros::Time::now() == ros::Time(0)); // If in simulation, wait until /clock messages are published
     while(ros::ok())
     {
         ros::spinOnce();

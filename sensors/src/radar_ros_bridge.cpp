@@ -362,6 +362,7 @@ void RadarRosBridge::main()
 		ROS_WARN_STREAM("Exception related with UDP socket: " << e.what());
 	}
 	ros::Rate rate(_working_frequency);
+	while(ros::Time::now() == ros::Time(0)); // If in simulation, wait until /clock messages are published
 	while(ros::ok())
 	{
 		//_io_service.poll_one();

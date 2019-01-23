@@ -8,6 +8,7 @@
 //------------------------------------------------------------------------------
 
 #include <tracking/target_tracker.h>
+#include <ros/duration.h>
 #include <iostream>
 
 #define VEL_NOISE_VAR 0.2 
@@ -280,7 +281,7 @@ double TargetTracker::getDistance(Candidate* z)
 Return the time since the last observation update. 
 \return Update time
 */
-double TargetTracker::lastUpdateTime()
+ros::Duration TargetTracker::lastUpdateTime()
 {
 	return update_timer_.elapsed();
 }

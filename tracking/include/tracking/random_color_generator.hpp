@@ -5,6 +5,7 @@
 
 #include <std_msgs/ColorRGBA.h>
 #include <random>
+#include <chrono>
 
 #ifdef DEBUG_MODE
 #include <iostream>

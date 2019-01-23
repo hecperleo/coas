@@ -330,13 +330,21 @@ void CentralizedEstimator::removeLostTargets()
 		if( ((it->second)->getStatus() == LOST) 
 		|| ((it->second)->lastUpdateTime() > lost_th_ && (it->second)->getUpdateCount() < min_update_count_) )
 		*/
-		if( (it->second)->lastUpdateTime() > lost_th_ )
+		if( (it->second)->lastUpdateTime() > ros::Duration(lost_th_) )
 		{
+			#ifdef DEBUG_MODE
+			cout << "Target " << it->first << " REMOVED. Last update time: " << (it->second)->lastUpdateTime() << endl;
+			#endif
 			delete(it->second);
 			it = targets_.erase(it);
 		}
 		else
+		{
+			#ifdef DEBUG_MODE
+				cout << "Target " << it->first << " last update time: " << (it->second)->lastUpdateTime() << endl;
+			#endif
 			++it;
+		}
 	}
 }
 
