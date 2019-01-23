@@ -92,6 +92,26 @@ private:
 
   // Phase
   int phase_; // 1 Docking - 2 Harbor - 3 Sea
+
+  // DOCKING parameters
+  float docking_distance_threshold_, docking_cluster_tolerance_;
+  int docking_min_cluster_size_, docking_max_cluster_size_;
+  float docking_close_distance_, docking_xy_min_post_, docking_xy_max_post_, docking_z_min_post_, docking_z_max_post_;
+  float docking_min_distance_post_12_, docking_max_distance_post_12_;
+  float docking_min_distance_post_13_, docking_max_distance_post_13_;
+  // HARBOR parameters
+  float harbor_distance_threshold_, harbor_cluster_tolerance_;
+  int harbor_min_cluster_size_, harbor_max_cluster_size_;
+  float harbor_close_distance_, harbor_xy_min_post_, harbor_xy_max_post_, harbor_z_min_post_, harbor_z_max_post_;
+  float harbor_min_distance_post_12_, harbor_max_distance_post_12_;
+  float harbor_min_distance_post_13_, harbor_max_distance_post_13_;
+  // SEA parameters
+  float sea_distance_threshold_, sea_cluster_tolerance_;
+  int sea_min_cluster_size_, sea_max_cluster_size_;
+  float sea_close_distance_, sea_xy_min_post_, sea_xy_max_post_, sea_z_min_post_, sea_z_max_post_;
+  float sea_min_distance_post_12_, sea_max_distance_post_12_;
+  float sea_min_distance_post_13_, sea_max_distance_post_13_;
+
   // Euclidean Clusterer specific parameters
   float distance_threshold_, cluster_tolerance_, min_cluster_size_, max_cluster_size_;
   // Bounding Boxes specific parameters

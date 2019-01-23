@@ -8,6 +8,57 @@ BoundingBoxes::BoundingBoxes() : nh_(), pnh_("~")
 {
     // params();
     pnh_.param<std::string>("frame_id", frame_id_, "/velodyne");
+    // DOCKING parameters
+    // Euclidean clusterer parameters
+    pnh_.param<float>("docking_distance_threshold", docking_distance_threshold_, 0.4);
+    pnh_.param<float>("docking_cluster_tolerance", docking_cluster_tolerance_, 0.8);
+    pnh_.param<int>("docking_min_cluster_size", docking_min_cluster_size_, 30);
+    pnh_.param<int>("docking_max_cluster_size", docking_max_cluster_size_, 600);
+    // Bounding boxes parameters
+    pnh_.param<float>("docking_close_distance", docking_close_distance_, 1.0);
+    pnh_.param<float>("docking_xy_min_post", docking_xy_min_post_, 0.1);
+    pnh_.param<float>("docking_xy_max_post", docking_xy_max_post_, 0.6);
+    pnh_.param<float>("docking_z_min_post", docking_z_min_post_, 1.0);
+    pnh_.param<float>("docking_z_max_post", docking_z_max_post_, 3.0);
+    pnh_.param<float>("docking_min_distance_post_12", docking_min_distance_post_12_, 3.5);
+    pnh_.param<float>("docking_max_distance_post_12", docking_max_distance_post_12_, 3.9);
+    pnh_.param<float>("docking_min_distance_post_13", docking_min_distance_post_13_, 8.4);
+    pnh_.param<float>("docking_max_distance_post_12", docking_max_distance_post_13_, 8.8);
+    //************************************************************************************
+    // HARBOR parameters
+    // Euclidean clusterer parameters
+    pnh_.param<float>("harbor_distance_threshold", harbor_distance_threshold_, 0.5);
+    pnh_.param<float>("harbor_cluster_tolerance", harbor_cluster_tolerance_, 0.8);
+    pnh_.param<int>("harbor_min_cluster_size", harbor_min_cluster_size_, 30);
+    pnh_.param<int>("harbor_max_cluster_size", harbor_max_cluster_size_, 25000);
+    // Bounding boxes parameters
+    pnh_.param<float>("harbor_close_distance", harbor_close_distance_, 1.0);
+    pnh_.param<float>("harbor_xy_min_post", harbor_xy_min_post_, 0.3);
+    pnh_.param<float>("harbor_xy_max_post", harbor_xy_max_post_, 1.6);
+    pnh_.param<float>("harbor_z_min_post", harbor_z_min_post_, 0.5);
+    pnh_.param<float>("harbor_z_max_post", harbor_z_max_post_, 2.0);
+    pnh_.param<float>("harbor_min_distance_post_12", harbor_min_distance_post_12_, 0);
+    pnh_.param<float>("harbor_max_distance_post_12", harbor_max_distance_post_12_, 20);
+    pnh_.param<float>("harbor_min_distance_post_13", harbor_min_distance_post_13_, 15);
+    pnh_.param<float>("harbor_max_distance_post_12", harbor_max_distance_post_13_, 17);
+    //************************************************************************************
+    // SEA parameters
+    // Euclidean clusterer parameters
+    pnh_.param<float>("sea_distance_threshold", sea_distance_threshold_, 0.5);
+    pnh_.param<float>("sea_cluster_tolerance", sea_cluster_tolerance_, 0.8);
+    pnh_.param<int>("sea_min_cluster_size", sea_min_cluster_size_, 2);
+    pnh_.param<int>("sea_max_cluster_size", sea_max_cluster_size_, 25000);
+    // Bounding boxes parameters
+    pnh_.param<float>("sea_close_distance", sea_close_distance_, 5.0);
+    pnh_.param<float>("sea_xy_min_post", sea_xy_min_post_, 0.0);
+    pnh_.param<float>("sea_xy_max_post", sea_xy_max_post_, 0.0);
+    pnh_.param<float>("sea_z_min_post", sea_z_min_post_, 0.0);
+    pnh_.param<float>("sea_z_max_post", sea_z_max_post_, 0.0);
+    pnh_.param<float>("sea_min_distance_post_12", sea_min_distance_post_12_, 0.0);
+    pnh_.param<float>("sea_max_distance_post_12", sea_max_distance_post_12_, 0.0);
+    pnh_.param<float>("sea_min_distance_post_13", sea_min_distance_post_13_, 0.0);
+    pnh_.param<float>("sea_max_distance_post_12", sea_max_distance_post_13_, 0.0);
+    //************************************************************************************
 
     // Subscriptions
     sub_filter_points_ = nh_.subscribe("filter_points", 1, &BoundingBoxes::cloudCallback, this);
@@ -76,38 +127,38 @@ void BoundingBoxes::phaseCallback(const std_msgs::Int8 phaseMode)
     // Docking
     case DOCKING:
         // Euclidean Clusterer Parameters
-        distance_threshold_ = 0.4;
-        cluster_tolerance_ = 0.8;
-        min_cluster_size_ = 30;
-        max_cluster_size_ = 600;
+        distance_threshold_ = docking_distance_threshold_;
+        cluster_tolerance_ = docking_cluster_tolerance_;
+        min_cluster_size_ = docking_min_cluster_size_;
+        max_cluster_size_ = docking_max_cluster_size_;
         // Bounding Boxes parameters
-        close_distance_ = 1.0;
-        xy_min_post_ = 0.1; /// TODO
-        xy_max_post_ = 0.6; /// TODO
-        z_min_post_ = 1;
-        z_max_post_ = 3.0;
-        min_distance_post_12_ = 3.5;
-        max_distance_post_12_ = 3.9;
-        min_distance_post_13_ = 8.4; /// Previous value: 8.5. Changed because a distance of 8.47 is detected
-        max_distance_post_13_ = 8.8;
+        close_distance_ = docking_close_distance_;
+        xy_min_post_ = docking_xy_min_post_; /// TODO
+        xy_max_post_ = docking_xy_max_post_; /// TODO
+        z_min_post_ = docking_z_min_post_;
+        z_max_post_ = docking_z_max_post_;
+        min_distance_post_12_ = docking_min_distance_post_12_;
+        max_distance_post_12_ = docking_max_distance_post_12_;
+        min_distance_post_13_ = docking_min_distance_post_13_;
+        max_distance_post_13_ = docking_max_distance_post_13_;
         break;
     // Harbor
     case HARBOR:
         // Euclidean Clusterer Parameters
-        distance_threshold_ = 0.5;
-        cluster_tolerance_ = 0.8;
-        min_cluster_size_ = 30;
-        max_cluster_size_ = 25000;
+        distance_threshold_ = harbor_distance_threshold_;
+        cluster_tolerance_ = harbor_cluster_tolerance_;
+        min_cluster_size_ = harbor_min_cluster_size_;
+        max_cluster_size_ = harbor_max_cluster_size_;
         // Bounding Boxes parameters
-        close_distance_ = 1.0;
-        xy_min_post_ = 0.3;
-        xy_max_post_ = 1.6;
-        z_min_post_ = 0.5;
-        z_max_post_ = 2.0;
-        min_distance_post_12_ = 0.0;
-        max_distance_post_12_ = 20.0;
-        min_distance_post_13_ = 15.0;
-        max_distance_post_13_ = 17.0;
+        close_distance_ = harbor_close_distance_;
+        xy_min_post_ = harbor_xy_min_post_; /// TODO
+        xy_max_post_ = harbor_xy_max_post_; /// TODO
+        z_min_post_ = harbor_z_min_post_;
+        z_max_post_ = harbor_z_max_post_;
+        min_distance_post_12_ = harbor_min_distance_post_12_;
+        max_distance_post_12_ = harbor_max_distance_post_12_;
+        min_distance_post_13_ = harbor_min_distance_post_13_;
+        max_distance_post_13_ = harbor_max_distance_post_13_;
         break;
     // Sea
     case SEA:
