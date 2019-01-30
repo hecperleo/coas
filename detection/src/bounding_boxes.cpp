@@ -315,13 +315,10 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
             if (phase_ == DOCKING)
                 checkPostDimension(max_dist_x_, max_dist_y_, max_dist_z_);
         }
-        // Publish all boxes at one time
-        pub_boxes_.publish(boxes_);
         if(phase_ == DOCKING)
         {
             // Check distances between posts
             checkDistancesBetweenPosts();
-            pub_post_reference_boxes_.publish(post_reference_boxes_);     
         }
 
         // Calculate all possible polygons formed by clusters
@@ -365,6 +362,11 @@ void BoundingBoxes::cloudCallback(const sensor_msgs::PointCloud2Ptr &input_cloud
             pub_lidar_candidates_list_.publish(lidar_candidates_list);
         }
     }
+    // Publish all boxes at one time
+    pub_boxes_.publish(boxes_);
+    pub_post_reference_boxes_.publish(post_reference_boxes_);
+    pub_merge_boxes_.publish(merge_boxes_);
+
     std::cout << "[ BBXS] Time: " << ros::Time::now().toSec() - time_start << std::endl;
     std::cout << " - - - - - - - - - - - - - - - - -" << std::endl;
 
@@ -823,7 +825,6 @@ void BoundingBoxes::mergeBoundingBoxes()
         constructBoundingBoxes(centroid_polygon_cloud[0], centroid_polygon_cloud[1], centroid_polygon_cloud[2],
                                max_dist_x_polygon_, max_dist_y_polygon_, max_dist_z_polygon_, true);
     }
-    pub_merge_boxes_.publish(merge_boxes_);
 }
 
 void BoundingBoxes::getParameters()
